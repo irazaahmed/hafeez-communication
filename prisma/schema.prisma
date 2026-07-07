@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Single-admin auth. Not business data — this is the login credential store.
+/// The first row is bootstrapped from env (ADMIN_EMAIL / ADMIN_PASSWORD_HASH)
+/// on the first successful login; after that the admin can change the password
+/// from the settings screen and env is ignored.
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Product {
+  id         String    @id @default(cuid())
+  name       String
+  company    String
+  variant    String?
+  category   String
+  costPrice  Decimal
+  salePrice  Decimal
+  quantity   Int
+  imageUrl   String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  sales      Sale[]
+
+  @@unique([name, company, variant])
+}
+
+model Customer {
+  id         String              @id @default(cuid())
+  name       String
+  phone      String              @unique
+  createdAt  DateTime            @default(now())
+  sales      Sale[]
+  walletTxns WalletTransaction[]
+  mobiles    Mobile[]
+}
+
+enum PaymentType {
+  CASH
+  CREDIT
+}
+
+enum PaymentStatus {
+  PAID
+  PARTIAL
+  UNPAID
+}
+
+model Sale {
+  id            String          @id @default(cuid())
+  productId     String
+  product       Product         @relation(fields: [productId], references: [id])
+  quantity      Int
+  unitPrice     Decimal
+  totalPrice    Decimal
+  customerId    String?
+  customer      Customer?       @relation(fields: [customerId], references: [id])
+  paymentType   PaymentType     @default(CASH)
+  amountPaid    Decimal         @default(0)
+  amountDue     Decimal         @default(0)
+  paymentStatus PaymentStatus   @default(PAID)
+  createdAt     DateTime        @default(now())
+  payments      CreditPayment[]
+}
+
+model CreditPayment {
+  id        String   @id @default(cuid())
+  saleId    String
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  amount    Decimal
+  createdAt DateTime @default(now())
+}
+
+enum WalletTxnType {
+  DEPOSIT
+  TRANSFER
+  WITHDRAW
+}
+
+enum WalletProvider {
+  JAZZCASH
+  EASYPAISA
+}
+
+model WalletTransaction {
+  id         String          @id @default(cuid())
+  type       WalletTxnType
+  provider   WalletProvider
+  amount     Decimal
+  charges    Decimal
+  cashEffect Decimal
+  customerId String?
+  customer   Customer?       @relation(fields: [customerId], references: [id])
+  createdAt  DateTime        @default(now())
+}
+
+enum MobileStatus {
+  IN_STOCK
+  SOLD
+}
+
+model Mobile {
+  id            String        @id @default(cuid())
+  model         String
+  imei          String?       @unique
+  purchasedFrom String
+  purchasePrice Decimal
+  status        MobileStatus  @default(IN_STOCK)
+  soldToId      String?
+  soldTo        Customer?     @relation(fields: [soldToId], references: [id])
+  salePrice     Decimal?
+  purchasedAt   DateTime      @default(now())
+  soldAt        DateTime?
+}
+
+model Expense {
+  id        String   @id @default(cuid())
+  category  String
+  amount    Decimal
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model CashLedgerEntry {
+  id           String   @id @default(cuid())
+  sourceType   String // SALE, CREDIT_PAYMENT, EXPENSE, WALLET_TXN, MOBILE_PURCHASE, MOBILE_SALE, SESSION_OPEN, SESSION_CLOSE, MANUAL
+  sourceId     String?
+  amount       Decimal
+  balanceAfter Decimal
+  note         String?
+  createdAt    DateTime @default(now())
+}
+
+model CashSession {
+  id             String    @id @default(cuid())
+  openedAt       DateTime  @default(now())
+  openingAmount  Decimal
+  closedAt       DateTime?
+  closingAmount  Decimal?
+  expectedAmount Decimal?
+  difference     Decimal?
+}
