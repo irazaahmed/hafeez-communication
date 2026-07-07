@@ -30,8 +30,8 @@ export default async function MobilesPage() {
         description="Independent buy/sell of used phones — separate from accessories stock."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,26rem)_1fr]">
-        <Card className="h-fit p-5">
+      <div className="space-y-6">
+        <Card className="max-w-3xl p-5">
           <h2 className="mb-4 text-sm font-semibold text-slate-900 dark:text-slate-100">Buy a used mobile</h2>
           <MobileBuyForm />
         </Card>

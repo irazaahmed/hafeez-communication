@@ -10,17 +10,19 @@ export default function ExpenseForm() {
 
   return (
     <form action={formAction} className="space-y-4">
-      <div>
-        <Label htmlFor="category">Category</Label>
-        <Input id="category" name="category" required placeholder="e.g. Electricity, Rent, Tea" />
-      </div>
-      <div>
-        <Label htmlFor="amount">Amount (Rs.)</Label>
-        <Input id="amount" name="amount" type="number" min="0.01" step="0.01" required />
-      </div>
-      <div>
-        <Label htmlFor="note">Note (optional)</Label>
-        <Input id="note" name="note" placeholder="Detail" />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div>
+          <Label htmlFor="category">Category</Label>
+          <Input id="category" name="category" required placeholder="e.g. Electricity, Rent" />
+        </div>
+        <div>
+          <Label htmlFor="amount">Amount (Rs.)</Label>
+          <Input id="amount" name="amount" type="number" min="0.01" step="0.01" required />
+        </div>
+        <div>
+          <Label htmlFor="note">Note (optional)</Label>
+          <Input id="note" name="note" placeholder="Detail" />
+        </div>
       </div>
       <FormError message={state?.error} />
       {state?.ok && <FormSuccess message="Expense recorded." />}

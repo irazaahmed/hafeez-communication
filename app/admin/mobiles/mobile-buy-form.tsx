@@ -10,11 +10,15 @@ export default function MobileBuyForm() {
 
   return (
     <form action={formAction} className="space-y-4">
-      <div>
-        <Label htmlFor="model">Model</Label>
-        <Input id="model" name="model" required placeholder="e.g. Infinix Hot 30" />
-      </div>
       <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="model">Model</Label>
+          <Input id="model" name="model" required placeholder="e.g. Infinix Hot 30" />
+        </div>
+        <div>
+          <Label htmlFor="purchasedFrom">Purchased from</Label>
+          <Input id="purchasedFrom" name="purchasedFrom" required placeholder="Seller name / walk-in" />
+        </div>
         <div>
           <Label htmlFor="imei">IMEI (optional)</Label>
           <Input id="imei" name="imei" placeholder="15-digit IMEI" />
@@ -23,10 +27,6 @@ export default function MobileBuyForm() {
           <Label htmlFor="purchasePrice">Purchase price (Rs.)</Label>
           <Input id="purchasePrice" name="purchasePrice" type="number" min="0.01" step="0.01" required />
         </div>
-      </div>
-      <div>
-        <Label htmlFor="purchasedFrom">Purchased from</Label>
-        <Input id="purchasedFrom" name="purchasedFrom" required placeholder="Seller name / walk-in" />
       </div>
       <FormError message={state?.error} />
       {state?.ok && <FormSuccess message="Mobile added to stock." />}

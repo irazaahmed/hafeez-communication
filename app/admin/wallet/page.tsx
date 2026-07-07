@@ -22,8 +22,8 @@ export default async function WalletPage() {
         description="Cash-agent transactions. The cash effect is recomputed on the server."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,26rem)_1fr]">
-        <Card className="h-fit p-5">
+      <div className="space-y-6">
+        <Card className="max-w-3xl p-5">
           <h2 className="mb-4 text-sm font-semibold text-slate-900 dark:text-slate-100">New transaction</h2>
           <WalletForm customers={customers.map((c) => ({ id: c.id, name: c.name, phone: c.phone }))} />
         </Card>

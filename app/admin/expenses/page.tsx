@@ -28,14 +28,14 @@ export default async function ExpensesPage() {
         description="Shop expenses. Each one reduces the cash balance."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,24rem)_1fr]">
-        <Card className="h-fit p-5">
+      <div className="space-y-6">
+        <Card className="max-w-3xl p-5">
           <h2 className="mb-4 text-sm font-semibold text-slate-900 dark:text-slate-100">Add expense</h2>
           <ExpenseForm />
         </Card>
 
         <div>
-          <Card className="mb-4 px-5 py-4">
+          <Card className="mb-4 max-w-xs px-5 py-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               This month
             </p>
