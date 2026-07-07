@@ -49,7 +49,18 @@ export function Label({
 }
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`${inputCls} ${props.className ?? ""}`} />;
+  return (
+    <input
+      {...props}
+      onWheel={(e) => {
+        // Stop the mouse wheel from silently changing number amounts — only
+        // typing should. Blurring cancels the browser's scroll-to-increment.
+        if (e.currentTarget.type === "number") e.currentTarget.blur();
+        props.onWheel?.(e);
+      }}
+      className={`${inputCls} ${props.className ?? ""}`}
+    />
+  );
 }
 
 function Spinner() {
