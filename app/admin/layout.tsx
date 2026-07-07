@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import SignOutButton from "@/components/SignOutButton";
 import { ThemeToggle } from "@/components/theme-toggle";
 import AdminMobileNav from "@/components/admin-mobile-nav";
+import InstallPrompt from "@/components/install-prompt";
 import NavLinks from "./nav-links";
 
 export const metadata: Metadata = {
@@ -73,6 +74,7 @@ export default async function AdminLayout({
           {children}
         </main>
       </div>
+      <InstallPrompt />
     </div>
   );
 }
