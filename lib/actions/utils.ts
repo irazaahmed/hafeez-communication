@@ -7,7 +7,18 @@ import { auth } from "@/auth";
  */
 
 /** Return shape for useActionState-driven forms. */
-export type FormState = { error?: string; ok?: boolean } | undefined;
+export type FormState =
+  | {
+      error?: string;
+      ok?: boolean;
+      /**
+       * Set by addProduct when the entered name+company+variant already exists:
+       * the "New stock" form then asks the admin to confirm a restock instead of
+       * silently incrementing.
+       */
+      restock?: { label: string; existingQty: number; addQty: number };
+    }
+  | undefined;
 
 /**
  * Defense in depth: every admin server action re-checks the session role,

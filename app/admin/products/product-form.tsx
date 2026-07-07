@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import type { FormState } from "@/lib/actions/utils";
-import { FormError, Input, Label, SubmitButton } from "@/components/ui";
+import { FormError, Input, Label, SubmitButton, btnPrimaryCls } from "@/components/ui";
 
 type Defaults = {
   name?: string;
@@ -74,11 +74,32 @@ export default function ProductForm({
         </div>
       </div>
 
-      {mode === "add" && (
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          If a product with the same name, company and variant already exists,
-          its quantity is increased (restock) instead of creating a duplicate.
-        </p>
+      {/* Restock confirmation — shown when "New stock" matches an existing product */}
+      {mode === "add" && state?.restock && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+            This product already exists
+          </p>
+          <p className="mt-1 text-sm text-amber-700 dark:text-amber-200/90">
+            <span className="font-medium">{state.restock.label}</span> is already
+            in stock ({state.restock.existingQty} pcs). A new one can&apos;t be
+            created with the same name, company &amp; variant — this will{" "}
+            <span className="font-semibold">restock (+{state.restock.addQty})</span>{" "}
+            and refresh its price/specs.
+          </p>
+          <button
+            type="submit"
+            name="confirmRestock"
+            value="1"
+            className={`mt-3 ${btnPrimaryCls}`}
+          >
+            Yes, restock (+{state.restock.addQty})
+          </button>
+          <p className="mt-2 text-xs text-amber-700/80 dark:text-amber-200/70">
+            Want a different product instead? Change the name, company or variant
+            above, then press “Add to stock”.
+          </p>
+        </div>
       )}
 
       <FormError message={state?.error} />

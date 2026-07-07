@@ -34,6 +34,7 @@ export async function addProduct(
   const salePrice = moneyField(formData, "salePrice");
   const quantity = intField(formData, "quantity");
   const imageUrl = fieldOrNull(formData, "imageUrl");
+  const confirmRestock = field(formData, "confirmRestock") === "1";
 
   if (!name || !company || !category)
     return { error: "Name, company and category are required." };
@@ -49,6 +50,17 @@ export async function addProduct(
   });
 
   if (existing) {
+    // The admin used "New stock" but this product already exists. Don't silently
+    // restock — surface a confirmation first (unless already confirmed).
+    if (!confirmRestock) {
+      return {
+        restock: {
+          label: `${name} · ${company}${variant ? ` · ${variant}` : ""}`,
+          existingQty: existing.quantity,
+          addQty: quantity,
+        },
+      };
+    }
     await prisma.product.update({
       where: { id: existing.id },
       data: {

@@ -1,13 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import NavLinks from "@/app/admin/nav-links";
 
 /**
  * Mobile-only top bar for the admin panel: brand + hamburger that opens a
  * slide-over drawer holding the same NavLinks used by the desktop sidebar.
- * Hidden on md+ where the persistent sidebar takes over.
+ *
+ * The overlay + drawer are rendered through a portal to <body>. This is
+ * essential: the admin header uses `backdrop-blur` (a backdrop-filter), which
+ * makes the header a containing block for fixed-position descendants — a drawer
+ * rendered inside it would be clipped to the header's height and only show one
+ * or two links. Portalling to body keeps it viewport-anchored and full height.
  */
 export default function AdminMobileNav({
   email,
@@ -17,6 +23,9 @@ export default function AdminMobileNav({
   signOut: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   // Lock body scroll while the drawer is open, and close on Escape.
   useEffect(() => {
@@ -33,7 +42,7 @@ export default function AdminMobileNav({
 
   return (
     <div className="md:hidden">
-      {/* Trigger row (lives inside the sticky header) */}
+      {/* Trigger (stays in the header) */}
       <div className="flex items-center gap-2.5">
         <button
           type="button"
@@ -54,56 +63,65 @@ export default function AdminMobileNav({
         </span>
       </div>
 
-      {/* Overlay */}
-      <div
-        onClick={() => setOpen(false)}
-        aria-hidden="true"
-        className={`fixed inset-0 z-40 bg-navy-950/60 backdrop-blur-sm transition-opacity duration-200 ${
-          open ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      />
+      {/* Overlay + drawer portalled to <body> so the header's backdrop-filter
+          can't clip them. */}
+      {mounted &&
+        createPortal(
+          <div className="md:hidden">
+            <div
+              onClick={() => setOpen(false)}
+              aria-hidden="true"
+              className={`fixed inset-0 z-[100] bg-navy-950/60 transition-opacity duration-200 ${
+                open ? "opacity-100" : "pointer-events-none opacity-0"
+              }`}
+            />
 
-      {/* Drawer */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[82%] flex-col bg-navy-900 shadow-2xl transition-transform duration-200 ease-out ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="flex items-center justify-between px-5 py-4">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 overflow-hidden rounded-xl ring-1 ring-white/15">
-              <Image src="/HC-Logo.jpeg" alt="Hafeez Communication" width={40} height={40} className="h-full w-full object-cover" />
-            </span>
-            <div className="leading-tight">
-              <p className="text-sm font-bold tracking-tight text-white">Hafeez Communication</p>
-              <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wider text-brand-400">Admin Panel</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            aria-label="Close menu"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
-          </button>
-        </div>
+            <aside
+              className={`fixed inset-y-0 left-0 z-[101] flex h-full w-72 max-w-[85%] flex-col bg-navy-900 shadow-2xl transition-transform duration-200 ease-out ${
+                open ? "translate-x-0" : "-translate-x-full"
+              }`}
+            >
+              {/* Drawer header */}
+              <div className="flex shrink-0 items-center justify-between gap-2 border-b border-navy-700/60 px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 overflow-hidden rounded-xl ring-1 ring-white/15">
+                    <Image src="/HC-Logo.jpeg" alt="Hafeez Communication" width={40} height={40} className="h-full w-full object-cover" />
+                  </span>
+                  <div className="leading-tight">
+                    <p className="text-sm font-bold tracking-tight text-white">Hafeez Communication</p>
+                    <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wider text-brand-400">Admin Panel</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close menu"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                  </svg>
+                </button>
+              </div>
 
-        <div className="flex-1 overflow-y-auto py-2">
-          <NavLinks onNavigate={() => setOpen(false)} />
-        </div>
+              {/* Links (scroll if the list is taller than the screen) */}
+              <div className="flex-1 overflow-y-auto overscroll-contain py-3">
+                <NavLinks onNavigate={() => setOpen(false)} />
+              </div>
 
-        <div className="border-t border-navy-700/60 px-5 py-4">
-          {email && (
-            <p className="mb-3 truncate text-xs text-slate-400">
-              Signed in as <span className="font-medium text-slate-200">{email}</span>
-            </p>
-          )}
-          {signOut}
-        </div>
-      </aside>
+              {/* Footer */}
+              <div className="shrink-0 border-t border-navy-700/60 px-4 py-4">
+                {email && (
+                  <p className="mb-3 truncate text-xs text-slate-400">
+                    Signed in as <span className="font-medium text-slate-200">{email}</span>
+                  </p>
+                )}
+                {signOut}
+              </div>
+            </aside>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ScrollReveal } from "@/components/scroll-reveal";
+import LandingNav from "@/components/landing-nav";
 import { shopWaLink, SHOP_WHATSAPP } from "@/lib/whatsapp";
 
 /* Inline WhatsApp glyph so every green CTA reads unmistakably as WhatsApp
@@ -108,40 +109,8 @@ export default function HomePage() {
 
   return (
     <>
-      {/* ── Nav ─────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 border-b border-navy-700/60 bg-navy-900/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 overflow-hidden rounded-xl ring-1 ring-white/15">
-              <Image src="/HC-Logo.jpeg" alt="Hafeez Communication" width={40} height={40} className="h-full w-full object-cover" priority />
-            </span>
-            <span className="text-sm font-bold leading-tight tracking-tight sm:text-base">
-              Hafeez<span className="hidden min-[380px]:inline"> Communication</span>
-            </span>
-          </Link>
-
-          <nav className="hidden items-center gap-7 text-sm font-medium text-slate-300 md:flex">
-            <a href="#categories" className="transition-colors hover:text-brand-400">Categories</a>
-            <a href="#services" className="transition-colors hover:text-brand-400">Services</a>
-            <a href="#why" className="transition-colors hover:text-brand-400">Why us</a>
-            <a href="#visit" className="transition-colors hover:text-brand-400">Visit</a>
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="hidden items-center gap-1.5 rounded-lg border border-white/15 px-3.5 py-2 text-sm font-semibold text-slate-200 transition-colors hover:border-brand-400/50 hover:text-brand-400 sm:inline-flex"
-            >
-              <Glyph className="h-4 w-4"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" /></Glyph>
-              Admin
-            </Link>
-            <WaButton size="sm" text="Assalam o Alaikum Hafeez Communication!">
-              <span className="hidden sm:inline">Message us</span>
-              <span className="sm:hidden">Chat</span>
-            </WaButton>
-          </div>
-        </div>
-      </header>
+      {/* ── Nav (client: mobile hamburger menu with Admin login) ─────── */}
+      <LandingNav />
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden">
@@ -277,9 +246,8 @@ export default function HomePage() {
                     href={shopWaLink(s.prompt)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-5 inline-flex items-center gap-2 rounded-lg bg-whatsapp/10 px-3.5 py-2 text-sm font-semibold text-whatsapp transition-colors hover:bg-whatsapp hover:text-white"
+                    className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-400 transition-colors hover:text-brand-300"
                   >
-                    <WhatsAppIcon className="h-4 w-4" />
                     {s.cta}
                     <span className="transition-transform group-hover:translate-x-1" aria-hidden>→</span>
                   </a>
