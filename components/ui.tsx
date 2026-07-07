@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * Small shared UI primitives for the admin panel and customer portal so every
- * module (products, suppliers, customers, purchases, sales, portal ledger)
+ * Small shared UI primitives for the Hafeez Communication admin panel so every
+ * module (stock, sales, credits, wallet, customers, mobiles, expenses, cash)
  * looks consistent without pulling in a component library.
  *
- * Brand language (matches the Phase-1 public site / login redesign):
- *   - brand-600 primary, gradient from-brand-600 to-brand-600 for CTAs
+ * Brand language (matches the public site / login):
+ *   - brand-600 primary accent for CTAs
  *   - rounded-xl inputs/buttons, rounded-2xl cards
  *   - slate neutrals; red/amber/emerald reserved for semantics
  */

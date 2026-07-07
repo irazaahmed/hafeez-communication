@@ -30,11 +30,11 @@ const LINKS = [
   { href: "/admin/settings", label: "Settings", icon: "settings" },
 ];
 
-export default function NavLinks() {
+export default function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-row flex-wrap gap-1 px-3 pb-3 md:flex-col md:pb-0">
+    <nav className="flex flex-col gap-1 px-3 pb-3 md:pb-0">
       {LINKS.map(({ href, label, icon, exact }) => {
         const active = exact
           ? pathname === href
@@ -43,8 +43,9 @@ export default function NavLinks() {
           <Link
             key={href}
             href={href}
+            onClick={onNavigate}
             aria-current={active ? "page" : undefined}
-            className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 ${
+            className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400 ${
               active
                 ? "bg-brand-400/15 text-white"
                 : "text-slate-300 hover:bg-white/5 hover:text-white"
