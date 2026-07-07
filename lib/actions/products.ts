@@ -38,7 +38,9 @@ export async function addProduct(
   if (!name || !company || !category)
     return { error: "Name, company and category are required." };
   if (!costPrice || costPrice.lt(0)) return { error: "Enter a valid cost price." };
-  if (!salePrice || salePrice.lt(0)) return { error: "Enter a valid sale price." };
+  // Sale price is optional — the shop sets the price at sale time. If typed, it
+  // must be a non-negative number (moneyField returns null for blank/invalid).
+  if (salePrice && salePrice.lt(0)) return { error: "Sale price cannot be negative." };
   if (!Number.isInteger(quantity) || quantity < 0)
     return { error: "Enter a valid quantity." };
 
@@ -91,7 +93,7 @@ export async function updateProduct(
   if (!name || !company || !category)
     return { error: "Name, company and category are required." };
   if (!costPrice || costPrice.lt(0)) return { error: "Enter a valid cost price." };
-  if (!salePrice || salePrice.lt(0)) return { error: "Enter a valid sale price." };
+  if (salePrice && salePrice.lt(0)) return { error: "Sale price cannot be negative." };
 
   const data: Prisma.ProductUpdateInput = {
     name,

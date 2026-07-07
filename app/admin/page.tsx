@@ -2,7 +2,9 @@ import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { currentCashBalance } from "@/lib/ledger";
+import { getDailySummary } from "@/lib/reports";
 import { Badge, Card, LinkButton, PageHeader } from "@/components/ui";
+import DailySummaryCard from "@/components/daily-summary";
 import { formatDate, formatMoney } from "@/lib/format";
 import { waLink, reminderMessage } from "@/lib/whatsapp";
 
@@ -29,6 +31,7 @@ export default async function AdminDashboardPage() {
     customerCount,
     mobilesInStock,
     recentLedger,
+    summary,
   ] = await Promise.all([
     currentCashBalance(prisma),
     prisma.cashSession.findFirst({ where: { closedAt: null } }),
@@ -50,6 +53,7 @@ export default async function AdminDashboardPage() {
       orderBy: { createdAt: "desc" },
       take: 8,
     }),
+    getDailySummary(),
   ]);
 
   const pendingTotal = pendingCredits.reduce((s, sale) => s.add(sale.amountDue), zero);
@@ -99,6 +103,47 @@ export default async function AdminDashboardPage() {
         <MiniStat label="Low stock" value={lowStockCount} href="/admin/products" tone={lowStockCount > 0 ? "red" : undefined} />
         <MiniStat label="Customers" value={customerCount} href="/admin/customers" />
         <MiniStat label="Mobiles in stock" value={mobilesInStock} href="/admin/mobiles" />
+      </Card>
+
+      {/* Today's business — profit breakdown + expected cash (evening hisab) */}
+      <div className="mt-6">
+        <DailySummaryCard summary={summary} />
+      </div>
+
+      {/* Today's sales — what sold and for how much */}
+      <Card className="mt-6 overflow-hidden">
+        <div className="border-b border-slate-200 bg-slate-50/60 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/40">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Today&apos;s sales</h2>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Each sale with its profit</p>
+        </div>
+        {summary.sales.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
+            No sales recorded today yet.
+          </p>
+        ) : (
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+            {summary.sales.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-3 px-5 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                    {s.product} <span className="text-slate-400">×{s.quantity}</span>
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    {s.paymentType === "CREDIT" ? "Udhaar" : "Cash"}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+                    {formatMoney(s.totalPrice)}
+                  </p>
+                  <p className="text-xs tabular-nums text-emerald-600 dark:text-emerald-400">
+                    +{formatMoney(s.profit)} profit
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <div className="mt-6 grid items-start gap-6 xl:grid-cols-2">

@@ -30,7 +30,7 @@ export default async function NewSalePage() {
             company: p.company,
             variant: p.variant,
             quantity: p.quantity,
-            salePrice: p.salePrice.toString(),
+            salePrice: p.salePrice ? p.salePrice.toString() : null,
           }))}
           customers={customers.map((c) => ({ id: c.id, name: c.name, phone: c.phone }))}
         />

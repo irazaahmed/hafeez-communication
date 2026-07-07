@@ -1,6 +1,8 @@
 import prisma from "@/lib/prisma";
 import { currentCashBalance } from "@/lib/ledger";
+import { getDailySummary } from "@/lib/reports";
 import { Badge, Card, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
+import DailySummaryCard from "@/components/daily-summary";
 import { formatMoney } from "@/lib/format";
 import { OpenSessionForm, CloseSessionForm } from "./session-forms";
 
@@ -16,11 +18,12 @@ function formatDateTime(d: Date): string {
 }
 
 export default async function CashPage() {
-  const [balance, openSession, ledger, sessions] = await Promise.all([
+  const [balance, openSession, ledger, sessions, summary] = await Promise.all([
     currentCashBalance(prisma),
     prisma.cashSession.findFirst({ where: { closedAt: null } }),
     prisma.cashLedgerEntry.findMany({ orderBy: { createdAt: "desc" }, take: 40 }),
     prisma.cashSession.findMany({ orderBy: { openedAt: "desc" }, take: 10 }),
+    getDailySummary(),
   ]);
 
   return (
@@ -29,6 +32,10 @@ export default async function CashPage() {
         title="Cash Sessions"
         description="Live cash balance is the running ledger total. Open a session, then reconcile at close."
       />
+
+      <div className="mb-6">
+        <DailySummaryCard summary={summary} />
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_1fr]">
         <div className="space-y-4">

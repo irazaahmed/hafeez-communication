@@ -26,7 +26,9 @@ model Product {
   variant    String?
   category   String
   costPrice  Decimal
-  salePrice  Decimal
+  // Optional: the shop does not fix a sale price — it's decided at sale time.
+  // When present it's used only as a suggested default on the sale screen.
+  salePrice  Decimal?
   quantity   Int
   imageUrl   String?
   createdAt  DateTime  @default(now())
@@ -63,6 +65,10 @@ model Sale {
   product       Product         @relation(fields: [productId], references: [id])
   quantity      Int
   unitPrice     Decimal
+  // Snapshot of the product's cost per unit at sale time, so profit
+  // (unitPrice - unitCost) stays accurate even if the product is later restocked
+  // at a different cost. Profit is a report-only figure — it never hits the cash ledger.
+  unitCost      Decimal         @default(0)
   totalPrice    Decimal
   customerId    String?
   customer      Customer?       @relation(fields: [customerId], references: [id])

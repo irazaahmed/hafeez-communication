@@ -14,7 +14,7 @@ export type SaleProduct = {
   company: string;
   variant: string | null;
   quantity: number;
-  salePrice: string;
+  salePrice: string | null; // optional — used only as a suggested default
 };
 
 export default function SaleForm({
@@ -51,7 +51,8 @@ export default function SaleForm({
   function onSelectProduct(id: string) {
     setProductId(id);
     const p = products.find((x) => x.id === id);
-    if (p) setUnitPrice(p.salePrice);
+    // Sale price is optional on the product — only prefill when one is set.
+    setUnitPrice(p?.salePrice ?? "");
   }
 
   return (
@@ -80,7 +81,10 @@ export default function SaleForm({
         </select>
         {selected && (
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {selected.quantity} in stock · list price {formatMoney(selected.salePrice)}
+            {selected.quantity} in stock
+            {selected.salePrice
+              ? ` · suggested price ${formatMoney(selected.salePrice)}`
+              : " · no fixed price — enter it below"}
           </p>
         )}
       </div>

@@ -56,7 +56,7 @@ export async function createSale(
     saleId = await prisma.$transaction(async (tx) => {
       const product = await tx.product.findUnique({
         where: { id: productId },
-        select: { id: true, quantity: true },
+        select: { id: true, quantity: true, costPrice: true },
       });
       if (!product) throw new Error("Product not found.");
       if (product.quantity - quantity < 0)
@@ -73,6 +73,8 @@ export async function createSale(
           productId,
           quantity,
           unitPrice,
+          // Snapshot cost now so profit stays correct after future restocks.
+          unitCost: product.costPrice,
           totalPrice,
           customerId,
           paymentType,

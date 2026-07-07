@@ -50,8 +50,8 @@ export default function ProductForm({
           <Input id="costPrice" name="costPrice" type="number" min="0" step="0.01" required defaultValue={defaults.costPrice} />
         </div>
         <div>
-          <Label htmlFor="salePrice">Sale price (Rs.)</Label>
-          <Input id="salePrice" name="salePrice" type="number" min="0" step="0.01" required defaultValue={defaults.salePrice} />
+          <Label htmlFor="salePrice">Sale price (optional)</Label>
+          <Input id="salePrice" name="salePrice" type="number" min="0" step="0.01" defaultValue={defaults.salePrice} placeholder="Set at sale time" />
         </div>
         <div>
           <Label htmlFor="quantity">

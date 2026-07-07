@@ -61,7 +61,9 @@ export default async function ProductsPage() {
                 </Td>
                 <Td>{p.category}</Td>
                 <Td className="text-right tabular-nums">{formatMoney(p.costPrice)}</Td>
-                <Td className="text-right tabular-nums font-medium">{formatMoney(p.salePrice)}</Td>
+                <Td className="text-right tabular-nums font-medium">
+                  {p.salePrice ? formatMoney(p.salePrice) : <span className="text-slate-400">—</span>}
+                </Td>
                 <Td className="text-right">
                   {p.quantity <= LOW_STOCK ? (
                     <Badge tone={p.quantity === 0 ? "red" : "amber"}>{p.quantity}</Badge>

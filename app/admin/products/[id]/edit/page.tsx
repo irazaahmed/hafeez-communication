@@ -30,7 +30,7 @@ export default async function EditProductPage({
           variant: product.variant ?? "",
           category: product.category,
           costPrice: product.costPrice.toString(),
-          salePrice: product.salePrice.toString(),
+          salePrice: product.salePrice?.toString() ?? "",
           quantity: String(product.quantity),
           imageUrl: product.imageUrl ?? "",
         }}
