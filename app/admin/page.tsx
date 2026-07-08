@@ -13,12 +13,17 @@ export const dynamic = "force-dynamic";
 
 const LOW_STOCK_THRESHOLD = 5;
 
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+// Pakistan is UTC+5 (no DST). "Today" is measured against the Karachi wall clock
+// so it matches the evening hisab even though Vercel servers run in UTC.
+const PK_OFFSET_MS = 5 * 60 * 60 * 1000;
+function startOfPkDay(d: Date): Date {
+  const pk = new Date(d.getTime() + PK_OFFSET_MS);
+  const midnightPk = Date.UTC(pk.getUTCFullYear(), pk.getUTCMonth(), pk.getUTCDate());
+  return new Date(midnightPk - PK_OFFSET_MS);
 }
 
 export default async function AdminDashboardPage() {
-  const todayStart = startOfDay(new Date());
+  const todayStart = startOfPkDay(new Date());
   const zero = new Prisma.Decimal(0);
 
   const [
@@ -26,7 +31,7 @@ export default async function AdminDashboardPage() {
     openSession,
     todaySales,
     pendingCredits,
-    productCount,
+    stockRows,
     lowStockCount,
     customerCount,
     mobilesInStock,
@@ -45,7 +50,8 @@ export default async function AdminDashboardPage() {
       orderBy: { createdAt: "asc" }, // oldest due first
       include: { customer: true, product: { select: { name: true } } },
     }),
-    prisma.product.count(),
+    // Live stock valuation source: cost × quantity for every product.
+    prisma.product.findMany({ select: { costPrice: true, quantity: true } }),
     prisma.product.count({ where: { quantity: { lte: LOW_STOCK_THRESHOLD } } }),
     prisma.customer.count(),
     prisma.mobile.count({ where: { status: "IN_STOCK" } }),
@@ -58,6 +64,15 @@ export default async function AdminDashboardPage() {
 
   const pendingTotal = pendingCredits.reduce((s, sale) => s.add(sale.amountDue), zero);
 
+  // Total cost value of stock currently on the shelf — moves with every stock
+  // in / sale / return automatically because it reads live quantities.
+  const productCount = stockRows.length;
+  const stockCostValue = stockRows.reduce(
+    (s, p) => s.add(p.costPrice.mul(p.quantity)),
+    zero,
+  );
+  const stockUnits = stockRows.reduce((s, p) => s + p.quantity, 0);
+
   return (
     <div>
       <PageHeader
@@ -67,7 +82,7 @@ export default async function AdminDashboardPage() {
       />
 
       {/* Top stat row */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           label="Cash in hand (live)"
           value={formatMoney(cashBalance)}
@@ -78,6 +93,12 @@ export default async function AdminDashboardPage() {
           label="Today's sales"
           value={formatMoney(todaySales._sum.totalPrice ?? zero)}
           note={`${todaySales._count} sale${todaySales._count === 1 ? "" : "s"} · ${formatMoney(todaySales._sum.amountPaid ?? zero)} received`}
+        />
+        <StatCard
+          label="Stock cost value"
+          value={formatMoney(stockCostValue)}
+          note={`${stockUnits} unit${stockUnits === 1 ? "" : "s"} in stock · at cost`}
+          accent="gold"
         />
         <StatCard
           label="Pending credit"
@@ -280,7 +301,7 @@ function StatCard({
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
         {label}
       </p>
-      <p className={`mt-1.5 whitespace-nowrap text-xl font-bold tabular-nums xl:text-2xl ${valueColor}`}>
+      <p className={`mt-1.5 text-xl font-bold tabular-nums ${valueColor}`}>
         {value}
       </p>
       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{note}</p>
