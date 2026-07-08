@@ -12,6 +12,7 @@
  */
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 
 /* ------------------------------ class tokens ----------------------------- */
@@ -49,15 +50,29 @@ export function Label({
 }
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  const ref = useRef<HTMLInputElement>(null);
+
+  // Hard-stop the mouse wheel from silently changing number amounts — only
+  // typing should. React's onWheel is registered as a *passive* listener, so
+  // preventDefault() there is ignored; we attach a native NON-passive listener
+  // and preventDefault only while this number field is focused (page scroll is
+  // otherwise unaffected).
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (el.type === "number" && document.activeElement === el) {
+        e.preventDefault();
+      }
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
   return (
     <input
+      ref={ref}
       {...props}
-      onWheel={(e) => {
-        // Stop the mouse wheel from silently changing number amounts — only
-        // typing should. Blurring cancels the browser's scroll-to-increment.
-        if (e.currentTarget.type === "number") e.currentTarget.blur();
-        props.onWheel?.(e);
-      }}
       className={`${inputCls} ${props.className ?? ""}`}
     />
   );
