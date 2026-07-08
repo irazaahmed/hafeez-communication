@@ -3,19 +3,11 @@ import { currentCashBalance } from "@/lib/ledger";
 import { getDailySummary } from "@/lib/reports";
 import { Badge, Card, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
 import DailySummaryCard from "@/components/daily-summary";
-import { formatMoney } from "@/lib/format";
+import LiveClock from "@/components/live-clock";
+import { formatDateTime, formatMoney } from "@/lib/format";
 import { OpenSessionForm, CloseSessionForm } from "./session-forms";
 
 export const dynamic = "force-dynamic";
-
-function formatDateTime(d: Date): string {
-  return d.toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export default async function CashPage() {
   const [balance, openSession, ledger, sessions, summary] = await Promise.all([
@@ -37,6 +29,7 @@ export default async function CashPage() {
       <Card className="mb-6 p-5">
         <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] md:items-center">
           <div>
+            <LiveClock className="mb-2" />
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
               Cash in hand (live)
             </p>

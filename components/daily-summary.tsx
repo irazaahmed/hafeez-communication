@@ -40,7 +40,7 @@ export default function DailySummaryCard({ summary }: { summary: DailySummary })
       </div>
 
       {/* Profit sources */}
-      <div className="grid grid-cols-2 gap-px bg-slate-200 md:grid-cols-4 dark:bg-slate-800">
+      <div className="grid grid-cols-2 gap-px bg-slate-200 sm:grid-cols-3 lg:grid-cols-5 dark:bg-slate-800">
         <ProfitTile
           label="Sales profit"
           value={s.salesProfit}
@@ -55,6 +55,12 @@ export default function DailySummaryCard({ summary }: { summary: DailySummary })
           label="Mobile profit"
           value={s.mobileProfit}
           sub={`${s.mobileCount} sold · ${formatMoney(s.mobileRevenue)}`}
+        />
+        <ProfitTile
+          label="Returns / refunds"
+          value={s.returnsProfitReversed.negated()}
+          sub={`${s.returnsCount} return${s.returnsCount === 1 ? "" : "s"} · ${formatMoney(s.returnsRefund)} back`}
+          negativeIsRed
         />
         <ProfitTile
           label="Expenses"
@@ -76,6 +82,7 @@ export default function DailySummaryCard({ summary }: { summary: DailySummary })
         <Line label="Cash received on sales today" value={formatMoney(s.cashReceived)} />
         <Line label="Udhaar given today" value={formatMoney(s.creditGiven)} accent="gold" />
         <Line label="Old udhaar recovered today" value={formatMoney(s.creditReceived)} />
+        <Line label="Refunds paid today" value={formatMoney(s.returnsRefund)} accent="red" />
         <Line label="Expenses today" value={formatMoney(s.expensesTotal)} accent="red" />
       </div>
     </Card>

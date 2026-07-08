@@ -34,6 +34,7 @@ model Product {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   sales      Sale[]
+  returns    Return[]
 
   @@unique([name, company, variant])
 }
@@ -46,6 +47,7 @@ model Customer {
   sales      Sale[]
   walletTxns WalletTransaction[]
   mobiles    Mobile[]
+  returns    Return[]
 }
 
 enum PaymentType {
@@ -78,6 +80,33 @@ model Sale {
   paymentStatus PaymentStatus   @default(PAID)
   createdAt     DateTime        @default(now())
   payments      CreditPayment[]
+  returns       Return[]
+}
+
+enum ReturnType {
+  ITEM  // product handed back → goes into stock, cash refunded, profit reversed
+  MONEY // pure cash refund / change — no stock movement
+}
+
+/// A return / refund. Cash always leaves the drawer (one negative ledger entry).
+/// For ITEM returns the product goes back into stock and the sale margin is
+/// unwound. `profitReversed` is a REPORT-ONLY figure (like Sale.unitCost) — the
+/// daily summary subtracts it; it never touches the cash ledger directly.
+model Return {
+  id             String     @id @default(cuid())
+  type           ReturnType
+  saleId         String?
+  sale           Sale?      @relation(fields: [saleId], references: [id])
+  productId      String?
+  product        Product?   @relation(fields: [productId], references: [id])
+  quantity       Int        @default(0)
+  unitCost       Decimal    @default(0) // cost snapshot of returned goods
+  refundAmount   Decimal    // cash paid back to the customer (cash out)
+  profitReversed Decimal    @default(0) // margin unwound; subtracted in reports
+  customerId     String?
+  customer       Customer?  @relation(fields: [customerId], references: [id])
+  note           String?
+  createdAt      DateTime   @default(now())
 }
 
 model CreditPayment {
@@ -140,7 +169,7 @@ model Expense {
 
 model CashLedgerEntry {
   id           String   @id @default(cuid())
-  sourceType   String // SALE, CREDIT_PAYMENT, EXPENSE, WALLET_TXN, MOBILE_PURCHASE, MOBILE_SALE, SESSION_OPEN, SESSION_CLOSE, MANUAL
+  sourceType   String // SALE, CREDIT_PAYMENT, EXPENSE, WALLET_TXN, MOBILE_PURCHASE, MOBILE_SALE, RETURN, SESSION_OPEN, SESSION_CLOSE, MANUAL
   sourceId     String?
   amount       Decimal
   balanceAfter Decimal

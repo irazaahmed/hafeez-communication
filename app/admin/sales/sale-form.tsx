@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useActionState } from "react";
 import { createSale } from "@/lib/actions/sales";
 import type { FormState } from "@/lib/actions/utils";
@@ -32,10 +32,37 @@ export default function SaleForm({
   const [paymentType, setPaymentType] = useState<"CASH" | "CREDIT">("CASH");
   const [amountPaid, setAmountPaid] = useState("0");
 
+  // Searchable product picker state
+  const [search, setSearch] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
   const selected = useMemo(
     () => products.find((p) => p.id === productId),
     [products, productId],
   );
+
+  const matches = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const list = term
+      ? products.filter((p) =>
+          `${p.name} ${p.company} ${p.variant ?? ""}`.toLowerCase().includes(term),
+        )
+      : products;
+    return list.slice(0, 30);
+  }, [products, search]);
+
+  // Close the picker dropdown when clicking away from it.
+  useEffect(() => {
+    if (!pickerOpen) return;
+    function onDocClick(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPickerOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [pickerOpen]);
 
   const qtyNum = Number.parseInt(quantity, 10);
   const priceNum = Number.parseFloat(unitPrice);
@@ -53,32 +80,104 @@ export default function SaleForm({
     const p = products.find((x) => x.id === id);
     // Sale price is optional on the product — only prefill when one is set.
     setUnitPrice(p?.salePrice ?? "");
+    setPickerOpen(false);
+    setSearch("");
   }
 
   return (
     <form action={formAction} className="space-y-5">
-      {/* Product */}
-      <div>
-        <Label htmlFor="productId">Product</Label>
-        <select
-          id="productId"
-          name="productId"
-          required
-          value={productId}
-          onChange={(e) => onSelectProduct(e.target.value)}
-          className={inputCls}
-        >
-          <option value="" disabled>
-            Select a product…
-          </option>
-          {products.map((p) => (
-            <option key={p.id} value={p.id} disabled={p.quantity <= 0}>
-              {p.name} · {p.company}
-              {p.variant ? ` · ${p.variant}` : ""} — {p.quantity} in stock
-              {p.quantity <= 0 ? " (out)" : ""}
-            </option>
-          ))}
-        </select>
+      {/* hidden field carries the chosen product to the server action */}
+      <input type="hidden" name="productId" value={productId} required />
+
+      {/* Product — searchable picker */}
+      <div ref={pickerRef} className="relative">
+        <Label htmlFor="product-search">Product</Label>
+
+        {selected && !pickerOpen ? (
+          // Chosen product summary with a "Change" button
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className={`${inputCls} flex items-center justify-between gap-3 text-left`}
+          >
+            <span className="min-w-0">
+              <span className="block truncate font-medium text-slate-900 dark:text-slate-100">
+                {selected.name} · {selected.company}
+                {selected.variant ? ` · ${selected.variant}` : ""}
+              </span>
+              <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
+                {selected.quantity} in stock
+                {selected.salePrice
+                  ? ` · suggested ${formatMoney(selected.salePrice)}`
+                  : " · no fixed price"}
+              </span>
+            </span>
+            <span className="shrink-0 text-xs font-medium text-brand-600 dark:text-brand-400">
+              Change
+            </span>
+          </button>
+        ) : (
+          <>
+            <Input
+              id="product-search"
+              type="search"
+              autoComplete="off"
+              placeholder="Type to search: name, company or variant…"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPickerOpen(true);
+              }}
+              onFocus={() => setPickerOpen(true)}
+            />
+            {pickerOpen && (
+              <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                {matches.length === 0 ? (
+                  <p className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                    No products match “{search}”.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                    {matches.map((p) => {
+                      const out = p.quantity <= 0;
+                      return (
+                        <li key={p.id}>
+                          <button
+                            type="button"
+                            disabled={out}
+                            onClick={() => onSelectProduct(p.id)}
+                            className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-brand-400/10"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                                {p.name} · {p.company}
+                                {p.variant ? ` · ${p.variant}` : ""}
+                              </span>
+                              {p.salePrice && (
+                                <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
+                                  suggested {formatMoney(p.salePrice)}
+                                </span>
+                              )}
+                            </span>
+                            <span
+                              className={`shrink-0 text-xs tabular-nums ${
+                                out
+                                  ? "text-red-500"
+                                  : "text-slate-500 dark:text-slate-400"
+                              }`}
+                            >
+                              {out ? "out of stock" : `${p.quantity} in stock`}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
+          </>
+        )}
         {selected && (
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {selected.quantity} in stock

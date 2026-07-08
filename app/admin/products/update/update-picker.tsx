@@ -17,7 +17,7 @@ export type UpdateProduct = {
 
 /**
  * Searchable list of existing products for the "Update stock" flow. Pick one to
- * open its edit page (restock, change price/specs).
+ * open its restock page (add more quantity, optionally refresh price).
  */
 export default function UpdateStockPicker({ products }: { products: UpdateProduct[] }) {
   const [q, setQ] = useState("");
@@ -52,7 +52,7 @@ export default function UpdateStockPicker({ products }: { products: UpdateProduc
             {filtered.map((p) => (
               <li key={p.id}>
                 <Link
-                  href={`/admin/products/${p.id}/edit`}
+                  href={`/admin/products/${p.id}/restock`}
                   className="flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
                 >
                   <div className="min-w-0">
@@ -72,7 +72,7 @@ export default function UpdateStockPicker({ products }: { products: UpdateProduc
                       {p.salePrice ? formatMoney(p.salePrice) : "no fixed price"}
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 dark:border-slate-600 dark:text-slate-300">
-                      Update
+                      Restock
                       <span aria-hidden>→</span>
                     </span>
                   </div>

@@ -1,22 +1,8 @@
-import Link from "next/link";
 import prisma from "@/lib/prisma";
-import {
-  Badge,
-  EmptyState,
-  LinkButton,
-  PageHeader,
-  Table,
-  Td,
-  Th,
-  btnRowCls,
-} from "@/components/ui";
-import DeleteButton from "@/components/DeleteButton";
-import { formatMoney } from "@/lib/format";
-import { deleteProduct } from "@/lib/actions/products";
+import { EmptyState, LinkButton, PageHeader } from "@/components/ui";
+import ProductsTable from "./products-table";
 
 export const dynamic = "force-dynamic";
-
-const LOW_STOCK = 5;
 
 export default async function ProductsPage() {
   const products = await prisma.product.findMany({
@@ -45,51 +31,18 @@ export default async function ProductsPage() {
           action={<LinkButton href="/admin/products/new">+ New stock</LinkButton>}
         />
       ) : (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Product</Th>
-              <Th>Category</Th>
-              <Th className="text-right">Cost</Th>
-              <Th className="text-right">Sale</Th>
-              <Th className="text-right">Qty</Th>
-              <Th className="text-right">Actions</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((p) => (
-              <tr key={p.id}>
-                <Td>
-                  <span className="font-medium text-slate-900 dark:text-slate-100">{p.name}</span>
-                  <span className="block text-xs text-slate-500 dark:text-slate-400">
-                    {p.company}
-                    {p.variant ? ` · ${p.variant}` : ""}
-                  </span>
-                </Td>
-                <Td>{p.category}</Td>
-                <Td className="text-right tabular-nums">{formatMoney(p.costPrice)}</Td>
-                <Td className="text-right tabular-nums font-medium">
-                  {p.salePrice ? formatMoney(p.salePrice) : <span className="text-slate-400">—</span>}
-                </Td>
-                <Td className="text-right">
-                  {p.quantity <= LOW_STOCK ? (
-                    <Badge tone={p.quantity === 0 ? "red" : "amber"}>{p.quantity}</Badge>
-                  ) : (
-                    <span className="tabular-nums">{p.quantity}</span>
-                  )}
-                </Td>
-                <Td className="text-right">
-                  <div className="inline-flex items-center gap-2">
-                    <Link href={`/admin/products/${p.id}/edit`} className={btnRowCls}>
-                      Edit
-                    </Link>
-                    <DeleteButton action={deleteProduct.bind(null, p.id)} />
-                  </div>
-                </Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+        <ProductsTable
+          products={products.map((p) => ({
+            id: p.id,
+            name: p.name,
+            company: p.company,
+            variant: p.variant,
+            category: p.category,
+            costPrice: p.costPrice.toString(),
+            salePrice: p.salePrice ? p.salePrice.toString() : null,
+            quantity: p.quantity,
+          }))}
+        />
       )}
     </div>
   );

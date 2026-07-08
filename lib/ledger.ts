@@ -18,6 +18,7 @@ export type CashSourceType =
   | "WALLET_TXN"
   | "MOBILE_PURCHASE"
   | "MOBILE_SALE"
+  | "RETURN"
   | "SESSION_OPEN"
   | "SESSION_CLOSE"
   | "MANUAL";

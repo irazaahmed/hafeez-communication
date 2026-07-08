@@ -135,6 +135,44 @@ export async function updateProduct(
   redirect("/admin/products");
 }
 
+/**
+ * Restock an existing product: ADD the entered quantity to what's already in
+ * stock (increment, never overwrite). Optionally refreshes cost / sale price.
+ * This is the "Update stock" flow — the admin means "I bought more of this".
+ */
+export async function restockProduct(
+  id: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireAdmin();
+
+  const addQty = intField(formData, "addQty");
+  const costPrice = moneyField(formData, "costPrice");
+  const salePrice = moneyField(formData, "salePrice");
+
+  if (!Number.isInteger(addQty) || addQty < 1)
+    return { error: "Enter how many units to add (at least 1)." };
+  if (costPrice && costPrice.lt(0)) return { error: "Cost price cannot be negative." };
+  if (salePrice && salePrice.lt(0)) return { error: "Sale price cannot be negative." };
+
+  const data: Prisma.ProductUpdateInput = {
+    quantity: { increment: addQty },
+  };
+  // Only touch prices when the admin actually typed a value.
+  if (costPrice) data.costPrice = costPrice;
+  if (salePrice) data.salePrice = salePrice;
+
+  try {
+    await prisma.product.update({ where: { id }, data });
+  } catch {
+    return { error: "Could not restock — product not found." };
+  }
+
+  revalidatePath("/admin/products");
+  redirect("/admin/products");
+}
+
 export async function deleteProduct(id: string): Promise<{ error?: string }> {
   await requireAdmin();
   // Products with recorded sales are kept for history; block the delete.
