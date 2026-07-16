@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { Prisma, WalletTxnType, WalletProvider } from "@prisma/client";
 import prisma from "@/lib/prisma";
+import { auth } from "@/auth";
+import { verifyAdminCredentials } from "@/lib/admin-auth";
 import { appendCashLedger } from "@/lib/ledger";
 import { resolveCustomer } from "./customers";
 import { requireAdmin, field, moneyField, type FormState } from "./utils";
@@ -70,5 +72,61 @@ export async function createWalletTxn(
 
   revalidatePath("/admin/wallet");
   revalidatePath("/admin");
+  return { ok: true };
+}
+
+/**
+ * Delete a wallet transaction that was entered by mistake. Gated behind a
+ * re-entered admin password so a stray click can't wipe out a real record.
+ *
+ * The transaction row is never hard-deleted and the original CashLedgerEntry
+ * is never touched or removed — the ledger is append-only (.claude/skills/cash-ledger).
+ * Instead this writes a reversing ledger entry for -cashEffect and soft-deletes
+ * the WalletTransaction (deletedAt), so the audit trail and balanceAfter chain
+ * both stay intact.
+ */
+export async function deleteWalletTxn(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  await requireAdmin();
+
+  const session = await auth();
+  const email = session?.user?.email;
+  if (!email) return { error: "Not signed in." };
+
+  const id = field(formData, "id");
+  const password = field(formData, "password");
+  if (!id) return { error: "Missing transaction id." };
+  if (!password) return { error: "Enter your password to confirm deletion." };
+
+  const admin = await verifyAdminCredentials(email, password);
+  if (!admin) return { error: "Incorrect password." };
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const txn = await tx.walletTransaction.findUnique({ where: { id } });
+      if (!txn) throw new Error("Transaction not found.");
+      if (txn.deletedAt) throw new Error("This transaction was already deleted.");
+
+      await appendCashLedger(tx, {
+        sourceType: "WALLET_TXN",
+        sourceId: txn.id,
+        amount: txn.cashEffect.negated(),
+        note: `Reversal: deleted ${txn.provider} ${txn.type}`,
+      });
+
+      await tx.walletTransaction.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+      });
+    });
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not delete the transaction." };
+  }
+
+  revalidatePath("/admin/wallet");
+  revalidatePath("/admin");
+  revalidatePath("/admin/cash");
   return { ok: true };
 }

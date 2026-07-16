@@ -138,6 +138,7 @@ model WalletTransaction {
   customerId String?
   customer   Customer?       @relation(fields: [customerId], references: [id])
   createdAt  DateTime        @default(now())
+  deletedAt  DateTime?
 }
 
 enum MobileStatus {

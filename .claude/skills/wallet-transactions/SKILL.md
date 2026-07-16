@@ -33,3 +33,20 @@ All amounts are `Decimal`, never `Float`.
 Write exactly one `CashLedgerEntry` with `amount = cashEffect` and
 `sourceType: WALLET_TXN`, in the same `$transaction` as the `WalletTransaction`
 insert. See [[cash-ledger]].
+
+## Deleting a transaction
+
+`WalletTransaction` has a `deletedAt` column — deletion is a soft delete, never
+a hard delete, and it never touches the original `CashLedgerEntry` row (see
+[[cash-ledger]] on why ledger rows are append-only). `deleteWalletTxn` in
+`lib/actions/wallet.ts`:
+
+1. Re-verifies the admin's password via `verifyAdminCredentials` (a stray
+   click must not be able to delete a real transaction).
+2. Writes a **reversing** `CashLedgerEntry` for `-cashEffect`, `sourceType:
+   WALLET_TXN`, `sourceId` = the transaction id.
+3. Sets `deletedAt = now()` on the `WalletTransaction`.
+
+Listing queries must filter `deletedAt: null` so deleted rows drop out of the
+UI, but the row and its original ledger entry both stay in the database for
+audit purposes.

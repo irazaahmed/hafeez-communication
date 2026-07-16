@@ -54,3 +54,18 @@ in `lib/ledger.ts` — do not hand-roll ledger inserts. It:
   acceptable, but never a non-zero adjustment.)
 - The dashboard shows the **live** running balance (full ledger sum) at all
   times, not just at session close.
+
+## Ledger rows are append-only — never edit or delete them
+
+`balanceAfter` on every row is computed from the *previous* row's
+`balanceAfter` at insert time. Editing or deleting a historical
+`CashLedgerEntry` silently corrupts `balanceAfter` on every entry after it —
+never do it, and never expose a delete action on the ledger itself.
+
+To undo a cash-affecting action (e.g. an admin deletes a mistaken
+`WalletTransaction`), write a **new** entry with the opposite sign instead
+(same `sourceType`, `sourceId` = the original record's id, a note like
+`"Reversal: ..."`), then soft-delete the domain record if it needs to
+disappear from its own list (see [[wallet-transactions]] for the
+`WalletTransaction.deletedAt` example). This keeps the ledger a true
+append-only log and the running balance always correct.

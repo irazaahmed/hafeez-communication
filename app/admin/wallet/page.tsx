@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { Card, EmptyState, PageHeader, Table, Td, Th, Badge } from "@/components/ui";
 import { formatDate, formatMoney } from "@/lib/format";
 import WalletForm from "./wallet-form";
+import DeleteWalletTxn from "./delete-wallet-txn";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,7 @@ export default async function WalletPage() {
   const [customers, txns] = await Promise.all([
     prisma.customer.findMany({ orderBy: { name: "asc" } }),
     prisma.walletTransaction.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: "desc" },
       take: 50,
       include: { customer: { select: { name: true } } },
@@ -42,6 +44,7 @@ export default async function WalletPage() {
                   <Th className="text-right">Charges</Th>
                   <Th className="text-right">Cash effect</Th>
                   <Th>Customer</Th>
+                  <Th className="text-right">Actions</Th>
                 </tr>
               </thead>
               <tbody>
@@ -61,6 +64,11 @@ export default async function WalletPage() {
                       </span>
                     </Td>
                     <Td>{t.customer?.name ?? <span className="text-slate-400">—</span>}</Td>
+                    <Td className="text-right">
+                      <div className="flex justify-end">
+                        <DeleteWalletTxn id={t.id} label={`${t.provider} ${t.type} of ${formatMoney(t.amount)}`} />
+                      </div>
+                    </Td>
                   </tr>
                 ))}
               </tbody>
