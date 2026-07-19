@@ -16,15 +16,17 @@ export type PickerCustomer = { id: string; name: string; phone: string };
 export default function CustomerPicker({
   customers,
   label = "Customer (optional)",
+  defaultCustomerId = "",
 }: {
   customers: PickerCustomer[];
   label?: string;
+  defaultCustomerId?: string;
 }) {
   // Default to "new" when there are no saved customers yet.
   const [mode, setMode] = useState<"existing" | "new">(
     customers.length > 0 ? "existing" : "new",
   );
-  const [existingId, setExistingId] = useState("");
+  const [existingId, setExistingId] = useState(defaultCustomerId);
 
   return (
     <div className="space-y-3">

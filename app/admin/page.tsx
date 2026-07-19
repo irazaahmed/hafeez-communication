@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { Pencil } from "lucide-react";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { currentCashBalance } from "@/lib/ledger";
 import { getDailySummary } from "@/lib/reports";
 import { Badge, Card, LinkButton, PageHeader } from "@/components/ui";
 import DailySummaryCard from "@/components/daily-summary";
+import DeleteWithPassword from "@/components/delete-with-password";
+import { deleteSale } from "@/lib/actions/sales";
 import { formatDate, formatMoney } from "@/lib/format";
 import { waLink, reminderMessage } from "@/lib/whatsapp";
 
@@ -41,12 +44,12 @@ export default async function AdminDashboardPage() {
     currentCashBalance(prisma),
     prisma.cashSession.findFirst({ where: { closedAt: null } }),
     prisma.sale.aggregate({
-      where: { createdAt: { gte: todayStart } },
+      where: { createdAt: { gte: todayStart }, deletedAt: null },
       _sum: { totalPrice: true, amountPaid: true },
       _count: true,
     }),
     prisma.sale.findMany({
-      where: { amountDue: { gt: 0 } },
+      where: { amountDue: { gt: 0 }, deletedAt: null },
       orderBy: { createdAt: "asc" }, // oldest due first
       include: { customer: true, product: { select: { name: true } } },
     }),
@@ -153,13 +156,27 @@ export default async function AdminDashboardPage() {
                     {s.paymentType === "CREDIT" ? "Udhaar" : "Cash"}
                   </p>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
-                    {formatMoney(s.totalPrice)}
-                  </p>
-                  <p className="text-xs tabular-nums text-emerald-600 dark:text-emerald-400">
-                    +{formatMoney(s.profit)} profit
-                  </p>
+                <div className="flex shrink-0 items-center gap-1">
+                  <div className="text-right">
+                    <p className="text-sm font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+                      {formatMoney(s.totalPrice)}
+                    </p>
+                    <p className="text-xs tabular-nums text-emerald-600 dark:text-emerald-400">
+                      +{formatMoney(s.profit)} profit
+                    </p>
+                  </div>
+                  <Link
+                    href={`/admin/sales/${s.id}/edit`}
+                    aria-label="Edit sale"
+                    className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-400/10 dark:hover:text-brand-400"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Link>
+                  <DeleteWithPassword
+                    action={deleteSale}
+                    hiddenFields={{ id: s.id }}
+                    warning={`This reverses stock and cash for ${s.product} ×${s.quantity}. Enter your password to confirm.`}
+                  />
                 </div>
               </li>
             ))}
@@ -180,7 +197,7 @@ export default async function AdminDashboardPage() {
 
           {pendingCredits.length === 0 ? (
             <p className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
-              No pending credit — everyone's paid up. 🎉
+              No pending credit — everyone&apos;s paid up. 🎉
             </p>
           ) : (
             <ul className="divide-y divide-slate-100 dark:divide-slate-800">

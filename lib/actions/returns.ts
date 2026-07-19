@@ -53,9 +53,10 @@ export async function createReturn(
 
         const sale = await tx.sale.findUnique({
           where: { id: saleId },
-          select: { id: true, productId: true, customerId: true, quantity: true, unitCost: true },
+          select: { id: true, productId: true, customerId: true, quantity: true, unitCost: true, deletedAt: true },
         });
         if (!sale) throw new Error("Original sale not found.");
+        if (sale.deletedAt) throw new Error("This sale was deleted and can't be returned against.");
 
         // Don't allow returning more than was sold (across all prior returns).
         const prior = await tx.return.aggregate({

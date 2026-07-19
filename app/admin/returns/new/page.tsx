@@ -10,6 +10,7 @@ export const metadata = { title: "New return — Hafeez Communication" };
 export default async function NewReturnPage() {
   const [sales, customers] = await Promise.all([
     prisma.sale.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: "desc" },
       take: 200,
       select: {

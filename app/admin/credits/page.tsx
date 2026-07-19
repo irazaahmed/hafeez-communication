@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function CreditsPage() {
   const credits = await prisma.sale.findMany({
-    where: { amountDue: { gt: 0 } },
+    where: { amountDue: { gt: 0 }, deletedAt: null },
     orderBy: { createdAt: "asc" }, // oldest due first
     include: { customer: true, product: { select: { name: true } } },
   });

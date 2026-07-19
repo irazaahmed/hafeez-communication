@@ -49,6 +49,11 @@ export default async function InvoicePage({
             <p className="text-sm font-semibold">Invoice</p>
             <p className="text-xs text-slate-500 dark:text-slate-400">{invoiceNo}</p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{formatDate(sale.createdAt)}</p>
+            {sale.deletedAt && (
+              <p className="mt-1">
+                <Badge tone="red">Deleted</Badge>
+              </p>
+            )}
           </div>
         </div>
 

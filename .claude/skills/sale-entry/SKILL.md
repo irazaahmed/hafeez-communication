@@ -38,3 +38,35 @@ Compute `totalPrice = unitPrice * quantity` (Decimal).
 Everything above (stock decrement, Sale insert, ledger entry) happens in one
 `prisma.$transaction`. See [[cash-ledger]]. Credit follow-up payments live in
 [[credit-and-invoicing]].
+
+## Editing or deleting a sale (typo fixes)
+
+`Sale` has a `deletedAt` column — deletion is always a soft delete, and the
+original `CashLedgerEntry` rows are never edited or removed (ledger is
+append-only, see [[cash-ledger]]). Both `updateSale` and `deleteSale` live in
+`lib/actions/sales.ts`.
+
+**Locked once real activity has happened against the sale** — if
+`sale._count.returns > 0` or `sale._count.payments > 0`, editing is refused
+outright (the admin-ui shows why instead of the form). Reasoning: a return has
+already put some quantity back into stock, and a credit payment has already
+added to `amountPaid` — changing quantity/price now would silently desync
+those from the corrected totals.
+
+- **Edit** (`updateSale`): recompute `totalPrice`/`amountDue`/`paymentStatus`
+  exactly like a fresh sale. Move `Product.quantity` by the *delta*
+  (`oldQuantity - newQuantity`), and write **one** `CashLedgerEntry` for the
+  *delta* between old and new `amountPaid` (`sourceType: SALE`, same
+  `sourceId`) — never two entries, never edit the original.
+- **Delete** (`deleteSale`, only refused when `returns.length > 0` — a return
+  already restored some stock, so restoring the full original quantity would
+  double-count it): re-verify the admin's password
+  (`verifyAdminCredentials`), put `sale.quantity` back into `Product.quantity`,
+  write a reversing `CashLedgerEntry` for `-sale.amountPaid` (this already
+  covers the original payment AND every credit payment recorded since, because
+  `recordCreditPayment` keeps incrementing `Sale.amountPaid`), then set
+  `Sale.deletedAt = now()`.
+
+Every list/aggregate query over `Sale` (dashboard, sales list, credits,
+customer due totals, daily summary, the returns picker) must filter
+`deletedAt: null`.

@@ -79,6 +79,7 @@ model Sale {
   amountDue     Decimal         @default(0)
   paymentStatus PaymentStatus   @default(PAID)
   createdAt     DateTime        @default(now())
+  deletedAt     DateTime?
   payments      CreditPayment[]
   returns       Return[]
 }

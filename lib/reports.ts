@@ -88,7 +88,7 @@ export async function getDailySummary(now: Date = new Date()): Promise<DailySumm
     await Promise.all([
       currentCashBalance(prisma),
       prisma.sale.findMany({
-        where: { createdAt: { gte: from } },
+        where: { createdAt: { gte: from }, deletedAt: null },
         orderBy: { createdAt: "desc" },
         select: {
           id: true,

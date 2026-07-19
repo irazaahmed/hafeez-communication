@@ -64,7 +64,7 @@ export async function updateCustomer(
 export async function deleteCustomer(id: string): Promise<{ error?: string }> {
   await requireAdmin();
   const [sales, mobiles, wallet] = await Promise.all([
-    prisma.sale.count({ where: { customerId: id } }),
+    prisma.sale.count({ where: { customerId: id, deletedAt: null } }),
     prisma.mobile.count({ where: { soldToId: id } }),
     prisma.walletTransaction.count({ where: { customerId: id } }),
   ]);

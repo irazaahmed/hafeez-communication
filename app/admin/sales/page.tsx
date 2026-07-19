@@ -10,6 +10,8 @@ import {
   Th,
   btnRowCls,
 } from "@/components/ui";
+import DeleteWithPassword from "@/components/delete-with-password";
+import { deleteSale } from "@/lib/actions/sales";
 import { formatDate, formatMoney } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +24,7 @@ const STATUS_TONE = {
 
 export default async function SalesPage() {
   const sales = await prisma.sale.findMany({
+    where: { deletedAt: null },
     orderBy: { createdAt: "desc" },
     take: 100,
     include: { product: { select: { name: true } }, customer: { select: { name: true } } },
@@ -53,6 +56,7 @@ export default async function SalesPage() {
               <Th className="text-right">Due</Th>
               <Th>Status</Th>
               <Th className="text-right">Invoice</Th>
+              <Th className="text-right">Actions</Th>
             </tr>
           </thead>
           <tbody>
@@ -77,6 +81,18 @@ export default async function SalesPage() {
                   <Link href={`/admin/sales/${s.id}/invoice`} className={btnRowCls}>
                     View
                   </Link>
+                </Td>
+                <Td className="text-right">
+                  <div className="flex justify-end gap-1">
+                    <Link href={`/admin/sales/${s.id}/edit`} className={btnRowCls}>
+                      Edit
+                    </Link>
+                    <DeleteWithPassword
+                      action={deleteSale}
+                      hiddenFields={{ id: s.id }}
+                      warning={`This reverses stock and cash for ${s.product.name} ×${s.quantity}. Enter your password to confirm.`}
+                    />
+                  </div>
                 </Td>
               </tr>
             ))}

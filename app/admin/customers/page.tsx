@@ -23,7 +23,7 @@ export default async function CustomersPage() {
     prisma.customer.findMany({ orderBy: { name: "asc" } }),
     prisma.sale.groupBy({
       by: ["customerId"],
-      where: { amountDue: { gt: 0 }, customerId: { not: null } },
+      where: { amountDue: { gt: 0 }, customerId: { not: null }, deletedAt: null },
       _sum: { amountDue: true },
     }),
   ]);

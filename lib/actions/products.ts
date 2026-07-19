@@ -176,7 +176,7 @@ export async function restockProduct(
 export async function deleteProduct(id: string): Promise<{ error?: string }> {
   await requireAdmin();
   // Products with recorded sales are kept for history; block the delete.
-  const saleCount = await prisma.sale.count({ where: { productId: id } });
+  const saleCount = await prisma.sale.count({ where: { productId: id, deletedAt: null } });
   if (saleCount > 0) {
     return { error: "Cannot delete a product that has sales history." };
   }

@@ -2,7 +2,8 @@ import prisma from "@/lib/prisma";
 import { Card, EmptyState, PageHeader, Table, Td, Th, Badge } from "@/components/ui";
 import { formatDate, formatMoney } from "@/lib/format";
 import WalletForm from "./wallet-form";
-import DeleteWalletTxn from "./delete-wallet-txn";
+import DeleteWithPassword from "@/components/delete-with-password";
+import { deleteWalletTxn } from "@/lib/actions/wallet";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,11 @@ export default async function WalletPage() {
                     <Td>{t.customer?.name ?? <span className="text-slate-400">—</span>}</Td>
                     <Td className="text-right">
                       <div className="flex justify-end">
-                        <DeleteWalletTxn id={t.id} label={`${t.provider} ${t.type} of ${formatMoney(t.amount)}`} />
+                        <DeleteWithPassword
+                          action={deleteWalletTxn}
+                          hiddenFields={{ id: t.id }}
+                          warning={`This reverses the cash effect of ${t.provider} ${t.type} of ${formatMoney(t.amount)}. Enter your password to confirm.`}
+                        />
                       </div>
                     </Td>
                   </tr>
