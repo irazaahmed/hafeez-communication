@@ -3,16 +3,19 @@ import prisma from "@/lib/prisma";
 import {
   Badge,
   EmptyState,
+  Input,
+  Label,
   LinkButton,
   PageHeader,
   Table,
   Td,
   Th,
   btnRowCls,
+  btnSecondaryCls,
 } from "@/components/ui";
 import DeleteWithPassword from "@/components/delete-with-password";
 import { deleteSale } from "@/lib/actions/sales";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, pkDayRange } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -22,9 +25,18 @@ const STATUS_TONE = {
   UNPAID: "red",
 } as const;
 
-export default async function SalesPage() {
+export default async function SalesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
+  const { date } = await searchParams;
+
   const sales = await prisma.sale.findMany({
-    where: { deletedAt: null },
+    where: {
+      deletedAt: null,
+      ...(date ? { createdAt: pkDayRange(date) } : {}),
+    },
     orderBy: { createdAt: "desc" },
     take: 100,
     include: { product: { select: { name: true } }, customer: { select: { name: true } } },
@@ -34,15 +46,46 @@ export default async function SalesPage() {
     <div>
       <PageHeader
         title="Sales"
-        description="Latest 100 sales. Each sale has a printable invoice."
+        description={
+          date
+            ? `Sales on ${formatDate(date)}.`
+            : "Latest 100 sales. Each sale has a printable invoice."
+        }
         action={<LinkButton href="/admin/sales/new">+ New Sale</LinkButton>}
       />
 
+      <form action="/admin/sales" className="mb-4 flex flex-wrap items-end gap-3">
+        <div>
+          <Label htmlFor="date">Filter by date</Label>
+          <Input id="date" name="date" type="date" defaultValue={date ?? ""} />
+        </div>
+        <button type="submit" className={btnSecondaryCls}>
+          Filter
+        </button>
+        {date && (
+          <Link href="/admin/sales" className={btnRowCls}>
+            Clear
+          </Link>
+        )}
+      </form>
+
       {sales.length === 0 ? (
         <EmptyState
-          title="No sales yet"
-          hint="Record your first sale from the fast entry screen."
-          action={<LinkButton href="/admin/sales/new">+ New Sale</LinkButton>}
+          title={date ? "No sales on this date" : "No sales yet"}
+          hint={
+            date
+              ? "Try another date, or clear the filter to see all sales."
+              : "Record your first sale from the fast entry screen."
+          }
+          action={
+            date ? (
+              <Link href="/admin/sales" className={btnSecondaryCls}>
+                Clear filter
+              </Link>
+            ) : (
+              <LinkButton href="/admin/sales/new">+ New Sale</LinkButton>
+            )
+          }
         />
       ) : (
         <Table>

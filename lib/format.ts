@@ -60,3 +60,16 @@ export function addDays(date: Date, days: number): Date {
   d.setDate(d.getDate() + days);
   return d;
 }
+
+// Same PK-midnight math as lib/reports.ts's startOfPkDay, but keyed off a
+// plain "yyyy-mm-dd" <input type="date"> value instead of "now" — used to
+// build a createdAt range for filtering a single Pakistan-time business day.
+const PK_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+/** `{ gte, lt }` UTC bounds for the Pakistan-time day of a "yyyy-mm-dd" string. */
+export function pkDayRange(dateStr: string): { gte: Date; lt: Date } {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const gte = new Date(Date.UTC(y, m - 1, d) - PK_OFFSET_MS);
+  const lt = new Date(gte.getTime() + 24 * 60 * 60 * 1000);
+  return { gte, lt };
+}

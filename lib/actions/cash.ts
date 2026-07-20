@@ -8,7 +8,17 @@ import { requireAdmin, moneyField, type FormState } from "./utils";
 
 /**
  * Open a cash session (.claude/skills/cash-ledger). Only one session may be
- * open at a time. Records the opening float as a SESSION_OPEN ledger entry.
+ * open at a time.
+ *
+ * `openingAmount` is the actual total cash the admin is starting the drawer
+ * with today — NOT an amount to add on top of the running balance (the
+ * running balance already carries forward everything from before, cash is
+ * never zeroed between sessions). The ledger only needs the DELTA versus what
+ * the last session closed at: if today's opening amount matches the last
+ * closing amount exactly, nothing moved and no cash effect is recorded; if
+ * it's higher, the difference was added; if lower, the difference was
+ * removed. The very first session ever (no prior closed session) has no
+ * baseline, so its full opening amount is the delta.
  */
 export async function openSession(
   _prev: FormState,
@@ -25,12 +35,21 @@ export async function openSession(
       const openCount = await tx.cashSession.count({ where: { closedAt: null } });
       if (openCount > 0) throw new Error("A cash session is already open.");
 
+      const lastClosed = await tx.cashSession.findFirst({
+        where: { closedAt: { not: null } },
+        orderBy: { closedAt: "desc" },
+      });
+      const lastClosingAmount = lastClosed?.closingAmount ?? new Prisma.Decimal(0);
+      const delta = openingAmount.minus(lastClosingAmount);
+
       const session = await tx.cashSession.create({ data: { openingAmount } });
       await appendCashLedger(tx, {
         sourceType: "SESSION_OPEN",
         sourceId: session.id,
-        amount: openingAmount,
-        note: "Opening float",
+        amount: delta,
+        note: delta.isZero()
+          ? `Opening float: same as last close (${lastClosingAmount.toString()}), no change`
+          : `Opening float: ${delta.gt(0) ? "added" : "removed"} ${delta.abs().toString()} vs last close (${lastClosingAmount.toString()})`,
       });
     });
   } catch (err) {

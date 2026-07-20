@@ -20,7 +20,7 @@ const ICONS: Record<string, React.ReactNode> = {
 
 const LINKS = [
   { href: "/admin", label: "Dashboard", icon: "dashboard", exact: true },
-  { href: "/admin/sales/new", label: "New Sale", icon: "sale" },
+  { href: "/admin/sales", label: "All Sales", icon: "sale" },
   { href: "/admin/products", label: "Stock", icon: "stock" },
   { href: "/admin/credits", label: "Credits", icon: "credits" },
   { href: "/admin/returns", label: "Returns", icon: "returns" },

@@ -40,12 +40,23 @@ in `lib/ledger.ts` — do not hand-roll ledger inserts. It:
 | Wallet txn | `+cashEffect` (server-recomputed; see wallet-transactions) |
 | Mobile purchase | `-purchasePrice` |
 | Mobile sale | `+salePrice` |
-| Session open | `+openingAmount` |
+| Session open | `+delta` (openingAmount − last session's closingAmount; see below) |
 
 ## Cash sessions
 
-- **Open**: enforce only ONE open session (`closedAt = null`) at a time. Create
-  `CashSession` + a `SESSION_OPEN` ledger entry for `+openingAmount`.
+- **Open**: enforce only ONE open session (`closedAt = null`) at a time.
+  `openingAmount` entered by the admin is the **actual total cash in the
+  drawer right now** — it is never added on top of the running balance,
+  because the running balance is never zeroed between sessions (cash
+  physically stays where it is; only newly injected or withdrawn cash is a
+  real movement). So the ledger entry's `amount` is the **delta**:
+  `openingAmount − lastClosedSession.closingAmount` (0 if there is no prior
+  closed session, i.e. this is the very first session ever — then the full
+  `openingAmount` is the delta). If the admin types the exact figure the last
+  session closed at, the delta is 0 and the ledger entry records no cash
+  movement (still written, for the audit trail, exactly like `SESSION_CLOSE`
+  below). `CashSession.openingAmount` itself always stores what was typed
+  (the real total), not the delta — only the ledger entry uses the delta.
 - **Close**: `expectedAmount = sum of ledger entries created since openedAt`
   (this already includes the opening entry). `difference = closingAmount -
   expectedAmount`. Store all three on the session. Do **not** write a ledger
