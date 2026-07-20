@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
-import { appendCashLedger } from "@/lib/ledger";
+import { appendCashLedger, currentCashBalance } from "@/lib/ledger";
 import { requireAdmin, moneyField, type FormState } from "./utils";
 
 /**
@@ -13,12 +13,17 @@ import { requireAdmin, moneyField, type FormState } from "./utils";
  * `openingAmount` is the actual total cash the admin is starting the drawer
  * with today — NOT an amount to add on top of the running balance (the
  * running balance already carries forward everything from before, cash is
- * never zeroed between sessions). The ledger only needs the DELTA versus what
- * the last session closed at: if today's opening amount matches the last
- * closing amount exactly, nothing moved and no cash effect is recorded; if
- * it's higher, the difference was added; if lower, the difference was
- * removed. The very first session ever (no prior closed session) has no
- * baseline, so its full opening amount is the delta.
+ * never zeroed between sessions). The ledger only needs the DELTA versus the
+ * last known cash state: if today's opening amount matches it exactly,
+ * nothing moved and no cash effect is recorded; if it's higher, the
+ * difference was added; if lower, the difference was removed.
+ *
+ * "Last known cash state" is the last CLOSED session's `closingAmount` when
+ * one exists (the physical count from that reconciliation, which may differ
+ * from the ledger if there was a shortage/excess). If no session has ever
+ * been closed — the very first session, or any stray activity was recorded
+ * without a session wrapping it — it falls back to the live running balance
+ * (`currentCashBalance`), since that's the best available expectation.
  */
 export async function openSession(
   _prev: FormState,
@@ -39,8 +44,10 @@ export async function openSession(
         where: { closedAt: { not: null } },
         orderBy: { closedAt: "desc" },
       });
-      const lastClosingAmount = lastClosed?.closingAmount ?? new Prisma.Decimal(0);
-      const delta = openingAmount.minus(lastClosingAmount);
+      const baseline = lastClosed
+        ? (lastClosed.closingAmount ?? new Prisma.Decimal(0))
+        : await currentCashBalance(tx);
+      const delta = openingAmount.minus(baseline);
 
       const session = await tx.cashSession.create({ data: { openingAmount } });
       await appendCashLedger(tx, {
@@ -48,8 +55,8 @@ export async function openSession(
         sourceId: session.id,
         amount: delta,
         note: delta.isZero()
-          ? `Opening float: same as last close (${lastClosingAmount.toString()}), no change`
-          : `Opening float: ${delta.gt(0) ? "added" : "removed"} ${delta.abs().toString()} vs last close (${lastClosingAmount.toString()})`,
+          ? `Opening float: same as last known balance (${baseline.toString()}), no change`
+          : `Opening float: ${delta.gt(0) ? "added" : "removed"} ${delta.abs().toString()} vs last known balance (${baseline.toString()})`,
       });
     });
   } catch (err) {
@@ -62,10 +69,13 @@ export async function openSession(
 }
 
 /**
- * Close the open cash session. expectedAmount = sum of ledger movements since
- * the session opened (this already includes the opening float).
- * difference = countedCash - expectedAmount. The reconciliation does NOT move
- * cash, so the SESSION_CLOSE audit entry has amount 0 (balance unchanged).
+ * Close the open cash session. expectedAmount is the live running cash
+ * balance right now (the single source of truth — see currentCashBalance),
+ * NOT a sum scoped to since-open: the ledger already carries every prior
+ * session's true count forward, so the running balance IS what should be in
+ * the drawer. difference = countedCash - expectedAmount. The reconciliation
+ * does NOT move cash, so the SESSION_CLOSE audit entry has amount 0 (balance
+ * unchanged).
  */
 export async function closeSession(
   _prev: FormState,
@@ -82,11 +92,7 @@ export async function closeSession(
       const session = await tx.cashSession.findFirst({ where: { closedAt: null } });
       if (!session) throw new Error("No open cash session to close.");
 
-      const agg = await tx.cashLedgerEntry.aggregate({
-        where: { createdAt: { gte: session.openedAt } },
-        _sum: { amount: true },
-      });
-      const expectedAmount = agg._sum.amount ?? new Prisma.Decimal(0);
+      const expectedAmount = await currentCashBalance(tx);
       const difference = closingAmount.minus(expectedAmount);
 
       await tx.cashSession.update({

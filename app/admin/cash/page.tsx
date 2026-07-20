@@ -58,7 +58,11 @@ export default async function CashPage() {
             ) : (
               <>
                 <h2 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Open a session</h2>
-                <OpenSessionForm lastClosingAmount={sessions[0]?.closingAmount?.toString()} />
+                <OpenSessionForm
+                  lastClosingAmount={(
+                    sessions.find((s) => s.closedAt)?.closingAmount ?? balance
+                  ).toString()}
+                />
               </>
             )}
           </div>

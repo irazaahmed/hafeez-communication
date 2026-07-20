@@ -24,7 +24,7 @@ export function OpenSessionForm({ lastClosingAmount }: { lastClosingAmount?: str
         <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
           Enter the actual total cash you have right now — not an amount to add.
           {lastClosingAmount &&
-            ` Last session closed at ${formatMoney(lastClosingAmount)}. Type the same figure to carry forward with no change, or a different one to record cash added/removed.`}
+            ` Last known balance was ${formatMoney(lastClosingAmount)}. Type the same figure to carry forward with no change, or a different one to record cash added/removed.`}
         </p>
       </div>
       <FormError message={state?.error} />

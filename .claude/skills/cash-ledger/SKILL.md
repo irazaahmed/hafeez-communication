@@ -40,7 +40,7 @@ in `lib/ledger.ts` — do not hand-roll ledger inserts. It:
 | Wallet txn | `+cashEffect` (server-recomputed; see wallet-transactions) |
 | Mobile purchase | `-purchasePrice` |
 | Mobile sale | `+salePrice` |
-| Session open | `+delta` (openingAmount − last session's closingAmount; see below) |
+| Session open | `+delta` (openingAmount − baseline; see below) |
 
 ## Cash sessions
 
@@ -50,19 +50,26 @@ in `lib/ledger.ts` — do not hand-roll ledger inserts. It:
   because the running balance is never zeroed between sessions (cash
   physically stays where it is; only newly injected or withdrawn cash is a
   real movement). So the ledger entry's `amount` is the **delta**:
-  `openingAmount − lastClosedSession.closingAmount` (0 if there is no prior
-  closed session, i.e. this is the very first session ever — then the full
-  `openingAmount` is the delta). If the admin types the exact figure the last
-  session closed at, the delta is 0 and the ledger entry records no cash
-  movement (still written, for the audit trail, exactly like `SESSION_CLOSE`
-  below). `CashSession.openingAmount` itself always stores what was typed
-  (the real total), not the delta — only the ledger entry uses the delta.
-- **Close**: `expectedAmount = sum of ledger entries created since openedAt`
-  (this already includes the opening entry). `difference = closingAmount -
-  expectedAmount`. Store all three on the session. Do **not** write a ledger
-  entry that alters the balance on close — the count is a reconciliation, not a
-  cash movement. (A `SESSION_CLOSE` entry with `amount = 0` for audit only is
-  acceptable, but never a non-zero adjustment.)
+  `openingAmount − baseline`, where `baseline` is the last CLOSED session's
+  `closingAmount` if one exists, else the live `currentCashBalance` (covers
+  the very first session ever, and any stray cash-affecting activity that
+  happened without a session wrapping it — the running balance is always the
+  best available "last known state" to reconcile against). If the admin types
+  the baseline figure exactly, the delta is 0 and the ledger entry records no
+  cash movement (still written, for the audit trail, exactly like
+  `SESSION_CLOSE` below). `CashSession.openingAmount` itself always stores
+  what was typed (the real total), not the delta — only the ledger entry uses
+  the delta.
+- **Close**: `expectedAmount = currentCashBalance` (the live running
+  balance right now) — **not** a sum scoped to entries since the session
+  opened. Because `openSession` already reconciles the opening delta against
+  the true baseline, the running balance at any moment IS what should
+  physically be in the drawer, regardless of session boundaries.
+  `difference = closingAmount - expectedAmount`. Store all three on the
+  session. Do **not** write a ledger entry that alters the balance on close —
+  the count is a reconciliation, not a cash movement. (A `SESSION_CLOSE` entry
+  with `amount = 0` for audit only is acceptable, but never a non-zero
+  adjustment.)
 - The dashboard shows the **live** running balance (full ledger sum) at all
   times, not just at session close.
 
