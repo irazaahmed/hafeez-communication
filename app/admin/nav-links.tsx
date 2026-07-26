@@ -14,6 +14,7 @@ const ICONS: Record<string, React.ReactNode> = {
   mobiles: <path d="M8 2h8a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1ZM11 18h2" />,
   customers: <path d="M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM20 19v-1.5a3.5 3.5 0 0 0-2.5-3.35M14.5 4.15A3.5 3.5 0 0 1 14.5 11" />,
   expenses: <path d="M12 3v18M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />,
+  report: <path d="M4 20V10M10 20V4M16 20v-7M4 20h16" />,
   cash: <path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9Zm0 4v10m2.5-7.5A2.5 2.5 0 0 0 12 9c-1.4 0-2.5.7-2.5 2s1.1 2 2.5 2 2.5.7 2.5 2-1.1 2-2.5 2a2.5 2.5 0 0 1-2.5-1.5" />,
   settings: <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />,
 };
@@ -28,6 +29,7 @@ const LINKS = [
   { href: "/admin/mobiles", label: "Used Mobiles", icon: "mobiles" },
   { href: "/admin/customers", label: "Customers", icon: "customers" },
   { href: "/admin/expenses", label: "Expenses", icon: "expenses" },
+  { href: "/admin/reports", label: "Profit Report", icon: "report" },
   { href: "/admin/cash", label: "Cash Sessions", icon: "cash" },
   { href: "/admin/settings", label: "Settings", icon: "settings" },
 ];

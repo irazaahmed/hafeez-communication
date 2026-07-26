@@ -73,3 +73,30 @@ export function pkDayRange(dateStr: string): { gte: Date; lt: Date } {
   const lt = new Date(gte.getTime() + 24 * 60 * 60 * 1000);
   return { gte, lt };
 }
+
+/** `{ gte, lt }` UTC bounds for the Pakistan-time calendar month of a "yyyy-mm" string. */
+export function pkMonthRange(monthStr: string): { gte: Date; lt: Date } {
+  const [y, m] = monthStr.split("-").map(Number);
+  const gte = new Date(Date.UTC(y, m - 1, 1) - PK_OFFSET_MS);
+  const nextY = m === 12 ? y + 1 : y;
+  const nextM = m === 12 ? 1 : m + 1;
+  const lt = new Date(Date.UTC(nextY, nextM - 1, 1) - PK_OFFSET_MS);
+  return { gte, lt };
+}
+
+/** Local-timezone yyyy-mm for <input type="month"> defaults. */
+export function currentMonthInputValue(): string {
+  const d = new Date();
+  const pad = (x: number) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+}
+
+/** "July 2026" from a "yyyy-mm" string. */
+export function monthLabel(monthStr: string): string {
+  const [y, m] = monthStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-GB", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}

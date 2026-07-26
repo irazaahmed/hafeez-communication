@@ -35,6 +35,18 @@ export default function WalletForm({ customers }: { customers: PickerCustomer[] 
   const [amount, setAmount] = useState("");
   const [charges, setCharges] = useState("");
 
+  // Clear amount/charges as soon as a save succeeds, so the next entry starts
+  // blank instead of carrying over the previous transaction's figures. Adjusted
+  // during render (not an effect) to avoid an extra render pass.
+  const [handledState, setHandledState] = useState(state);
+  if (state !== handledState) {
+    setHandledState(state);
+    if (state?.ok) {
+      setAmount("");
+      setCharges("");
+    }
+  }
+
   const effect = previewCashEffect(
     type,
     Number.parseFloat(amount) || 0,

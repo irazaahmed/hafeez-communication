@@ -2,6 +2,7 @@ import "server-only";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { currentCashBalance } from "@/lib/ledger";
+import { pkMonthRange, monthLabel } from "@/lib/format";
 
 /**
  * Daily business summary for the "evening hisab" — how much was sold, the cash
@@ -45,16 +46,15 @@ export type TodaySaleRow = {
   paymentType: "CASH" | "CREDIT";
 };
 
-export type DailySummary = {
-  cashInHand: Prisma.Decimal; // live ledger balance = "hard cash hona chahiye"
-
+/** Profit/activity breakdown for an arbitrary date range — no cash balance. */
+export type PeriodProfit = {
   // Product sales
   salesCount: number;
   salesRevenue: Prisma.Decimal;
   salesProfit: Prisma.Decimal;
-  cashReceived: Prisma.Decimal; // cash actually collected on today's sales
-  creditGiven: Prisma.Decimal; // amount left on udhaar from today's sales
-  creditReceived: Prisma.Decimal; // payments received today against old udhaar
+  cashReceived: Prisma.Decimal; // cash actually collected on the period's sales
+  creditGiven: Prisma.Decimal; // amount left on udhaar from the period's sales
+  creditReceived: Prisma.Decimal; // payments received against old udhaar
 
   // JazzCash / EasyPaisa
   walletCount: number;
@@ -67,8 +67,8 @@ export type DailySummary = {
 
   // Returns / refunds (cash out; profit unwound)
   returnsCount: number;
-  returnsRefund: Prisma.Decimal; // cash paid back to customers today
-  returnsProfitReversed: Prisma.Decimal; // margin unwound today
+  returnsRefund: Prisma.Decimal; // cash paid back to customers
+  returnsProfitReversed: Prisma.Decimal; // margin unwound
 
   // Expenses (counted separately)
   expensesCount: number;
@@ -78,50 +78,54 @@ export type DailySummary = {
   grossProfit: Prisma.Decimal; // sales + wallet + mobile (before returns/expenses)
   netProfit: Prisma.Decimal; // grossProfit − returns − expenses
 
-  sales: TodaySaleRow[]; // "aaj kya kya sale hua"
+  sales: TodaySaleRow[]; // every sale in the period, newest first
 };
 
-export async function getDailySummary(now: Date = new Date()): Promise<DailySummary> {
-  const from = startOfPkDay(now);
+/**
+ * Shared aggregation behind getDailySummary/getMonthlyProfitReport/
+ * getMonthlyProfitHistory. Profit is never stored — it's derived here from
+ * Sale/WalletTransaction/Mobile/Return/Expense rows every time, same as the
+ * daily hisab always worked, just parameterised by range instead of "today".
+ */
+async function computePeriodProfit(gte: Date, lt?: Date): Promise<PeriodProfit> {
+  const createdAt = lt ? { gte, lt } : { gte };
 
-  const [cashInHand, sales, wallet, mobiles, expenses, creditPayments, returns] =
-    await Promise.all([
-      currentCashBalance(prisma),
-      prisma.sale.findMany({
-        where: { createdAt: { gte: from }, deletedAt: null },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          quantity: true,
-          unitCost: true,
-          totalPrice: true,
-          amountPaid: true,
-          amountDue: true,
-          paymentType: true,
-          product: { select: { name: true } },
-        },
-      }),
-      prisma.walletTransaction.findMany({
-        where: { createdAt: { gte: from } },
-        select: { charges: true },
-      }),
-      prisma.mobile.findMany({
-        where: { status: "SOLD", soldAt: { gte: from } },
-        select: { purchasePrice: true, salePrice: true },
-      }),
-      prisma.expense.findMany({
-        where: { createdAt: { gte: from } },
-        select: { amount: true },
-      }),
-      prisma.creditPayment.findMany({
-        where: { createdAt: { gte: from } },
-        select: { amount: true },
-      }),
-      prisma.return.findMany({
-        where: { createdAt: { gte: from } },
-        select: { refundAmount: true, profitReversed: true },
-      }),
-    ]);
+  const [sales, wallet, mobiles, expenses, creditPayments, returns] = await Promise.all([
+    prisma.sale.findMany({
+      where: { createdAt, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        quantity: true,
+        unitCost: true,
+        totalPrice: true,
+        amountPaid: true,
+        amountDue: true,
+        paymentType: true,
+        product: { select: { name: true } },
+      },
+    }),
+    prisma.walletTransaction.findMany({
+      where: { createdAt },
+      select: { charges: true },
+    }),
+    prisma.mobile.findMany({
+      where: { status: "SOLD", soldAt: createdAt },
+      select: { purchasePrice: true, salePrice: true },
+    }),
+    prisma.expense.findMany({
+      where: { createdAt },
+      select: { amount: true },
+    }),
+    prisma.creditPayment.findMany({
+      where: { createdAt },
+      select: { amount: true },
+    }),
+    prisma.return.findMany({
+      where: { createdAt },
+      select: { refundAmount: true, profitReversed: true },
+    }),
+  ]);
 
   let salesRevenue = zero;
   let salesProfit = zero;
@@ -166,7 +170,6 @@ export async function getDailySummary(now: Date = new Date()): Promise<DailySumm
   const netProfit = grossProfit.minus(returnsProfitReversed).minus(expensesTotal);
 
   return {
-    cashInHand,
     salesCount: sales.length,
     salesRevenue,
     salesProfit,
@@ -187,4 +190,61 @@ export async function getDailySummary(now: Date = new Date()): Promise<DailySumm
     netProfit,
     sales: saleRows,
   };
+}
+
+export type DailySummary = PeriodProfit & {
+  cashInHand: Prisma.Decimal; // live ledger balance = "hard cash hona chahiye"
+};
+
+export async function getDailySummary(now: Date = new Date()): Promise<DailySummary> {
+  const from = startOfPkDay(now);
+  const [cashInHand, period] = await Promise.all([
+    currentCashBalance(prisma),
+    computePeriodProfit(from),
+  ]);
+  return { cashInHand, ...period };
+}
+
+export type MonthlyProfitReport = PeriodProfit & {
+  month: string; // "yyyy-mm"
+  label: string; // "July 2026"
+};
+
+/** Full profit breakdown (with per-sale rows) for one Pakistan-time calendar month. */
+export async function getMonthlyProfitReport(monthStr: string): Promise<MonthlyProfitReport> {
+  const { gte, lt } = pkMonthRange(monthStr);
+  const period = await computePeriodProfit(gte, lt);
+  return { month: monthStr, label: monthLabel(monthStr), ...period };
+}
+
+export type MonthlyProfitTotals = Omit<MonthlyProfitReport, "sales">;
+
+/** Last `monthsBack` calendar months (most recent first), totals only — for a trend table. */
+export async function getMonthlyProfitHistory(monthsBack = 12): Promise<MonthlyProfitTotals[]> {
+  const months = monthsBackList(monthsBack);
+  return Promise.all(
+    months.map(async (month) => {
+      const { gte, lt } = pkMonthRange(month);
+      const { sales, ...totals } = await computePeriodProfit(gte, lt);
+      void sales; // history rows only need totals, not the per-sale list
+      return { month, label: monthLabel(month), ...totals };
+    }),
+  );
+}
+
+/** ["2026-07", "2026-06", ...] — n calendar months ending with the current PK month. */
+function monthsBackList(n: number): string[] {
+  const pk = new Date(Date.now() + PK_OFFSET_MS);
+  let y = pk.getUTCFullYear();
+  let m = pk.getUTCMonth() + 1; // 1-12
+  const out: string[] = [];
+  for (let i = 0; i < n; i++) {
+    out.push(`${y}-${String(m).padStart(2, "0")}`);
+    m -= 1;
+    if (m === 0) {
+      m = 12;
+      y -= 1;
+    }
+  }
+  return out;
 }
