@@ -14,8 +14,10 @@ import {
   btnSecondaryCls,
 } from "@/components/ui";
 import DeleteWithPassword from "@/components/delete-with-password";
+import PeriodProfitCard from "@/components/period-profit-card";
 import { deleteSale } from "@/lib/actions/sales";
-import { formatDate, formatMoney, pkDayRange } from "@/lib/format";
+import { formatDate, formatMoney, pkDateRange } from "@/lib/format";
+import { getRangeProfitReport } from "@/lib/reports";
 
 export const dynamic = "force-dynamic";
 
@@ -28,27 +30,40 @@ const STATUS_TONE = {
 export default async function SalesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ from?: string; to?: string }>;
 }) {
-  const { date } = await searchParams;
+  const { from: fromRaw, to: toRaw } = await searchParams;
+  // Either end alone is treated as a single-day filter for that date; both
+  // ends together give a range. Both inclusive, in Pakistan-time days.
+  const from = fromRaw || toRaw || undefined;
+  const to = toRaw || fromRaw || undefined;
+  const hasFilter = Boolean(from && to);
+  const rangeLabel = hasFilter
+    ? from === to
+      ? formatDate(from!)
+      : `${formatDate(from!)} – ${formatDate(to!)}`
+    : undefined;
 
-  const sales = await prisma.sale.findMany({
-    where: {
-      deletedAt: null,
-      ...(date ? { createdAt: pkDayRange(date) } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: { product: { select: { name: true } }, customer: { select: { name: true } } },
-  });
+  const [sales, profit] = await Promise.all([
+    prisma.sale.findMany({
+      where: {
+        deletedAt: null,
+        ...(hasFilter ? { createdAt: pkDateRange(from!, to!) } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: { product: { select: { name: true } }, customer: { select: { name: true } } },
+    }),
+    hasFilter ? getRangeProfitReport(from!, to!) : null,
+  ]);
 
   return (
     <div>
       <PageHeader
         title="Sales"
         description={
-          date
-            ? `Sales on ${formatDate(date)}.`
+          hasFilter
+            ? `Sales for ${rangeLabel}.`
             : "Latest 100 sales. Each sale has a printable invoice."
         }
         action={<LinkButton href="/admin/sales/new">+ New Sale</LinkButton>}
@@ -56,29 +71,43 @@ export default async function SalesPage({
 
       <form action="/admin/sales" className="mb-4 flex flex-wrap items-end gap-3">
         <div>
-          <Label htmlFor="date">Filter by date</Label>
-          <Input id="date" name="date" type="date" defaultValue={date ?? ""} />
+          <Label htmlFor="from">Start date</Label>
+          <Input id="from" name="from" type="date" defaultValue={fromRaw ?? ""} />
+        </div>
+        <div>
+          <Label htmlFor="to">End date</Label>
+          <Input id="to" name="to" type="date" defaultValue={toRaw ?? ""} />
         </div>
         <button type="submit" className={btnSecondaryCls}>
           Filter
         </button>
-        {date && (
+        {hasFilter && (
           <Link href="/admin/sales" className={btnRowCls}>
             Clear
           </Link>
         )}
       </form>
 
+      {hasFilter && profit && (
+        <div className="mb-6">
+          <PeriodProfitCard
+            title={`Profit for ${rangeLabel}`}
+            subtitle="Derived live from sales, wallet, mobile and expense records for this date range"
+            summary={profit}
+          />
+        </div>
+      )}
+
       {sales.length === 0 ? (
         <EmptyState
-          title={date ? "No sales on this date" : "No sales yet"}
+          title={hasFilter ? "No sales in this range" : "No sales yet"}
           hint={
-            date
+            hasFilter
               ? "Try another date, or clear the filter to see all sales."
               : "Record your first sale from the fast entry screen."
           }
           action={
-            date ? (
+            hasFilter ? (
               <Link href="/admin/sales" className={btnSecondaryCls}>
                 Clear filter
               </Link>

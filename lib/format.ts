@@ -74,6 +74,11 @@ export function pkDayRange(dateStr: string): { gte: Date; lt: Date } {
   return { gte, lt };
 }
 
+/** `{ gte, lt }` UTC bounds spanning every Pakistan-time calendar day from `fromStr` through `toStr` inclusive. */
+export function pkDateRange(fromStr: string, toStr: string): { gte: Date; lt: Date } {
+  return { gte: pkDayRange(fromStr).gte, lt: pkDayRange(toStr).lt };
+}
+
 /** `{ gte, lt }` UTC bounds for the Pakistan-time calendar month of a "yyyy-mm" string. */
 export function pkMonthRange(monthStr: string): { gte: Date; lt: Date } {
   const [y, m] = monthStr.split("-").map(Number);

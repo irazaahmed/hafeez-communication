@@ -2,7 +2,7 @@ import "server-only";
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { currentCashBalance } from "@/lib/ledger";
-import { pkMonthRange, monthLabel } from "@/lib/format";
+import { pkMonthRange, monthLabel, pkDateRange } from "@/lib/format";
 
 /**
  * Daily business summary for the "evening hisab" — how much was sold, the cash
@@ -215,6 +215,18 @@ export async function getMonthlyProfitReport(monthStr: string): Promise<MonthlyP
   const { gte, lt } = pkMonthRange(monthStr);
   const period = await computePeriodProfit(gte, lt);
   return { month: monthStr, label: monthLabel(monthStr), ...period };
+}
+
+export type RangeProfitReport = PeriodProfit & {
+  from: string; // "yyyy-mm-dd"
+  to: string; // "yyyy-mm-dd"
+};
+
+/** Full profit breakdown (with per-sale rows) for an arbitrary Pakistan-time date range, inclusive of both ends. */
+export async function getRangeProfitReport(fromStr: string, toStr: string): Promise<RangeProfitReport> {
+  const { gte, lt } = pkDateRange(fromStr, toStr);
+  const period = await computePeriodProfit(gte, lt);
+  return { from: fromStr, to: toStr, ...period };
 }
 
 export type MonthlyProfitTotals = Omit<MonthlyProfitReport, "sales">;

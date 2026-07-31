@@ -12,7 +12,7 @@ import {
   btnRowCls,
   btnSecondaryCls,
 } from "@/components/ui";
-import MonthlyProfitCard from "@/components/monthly-profit-card";
+import PeriodProfitCard from "@/components/period-profit-card";
 import { currentMonthInputValue, formatMoney } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +54,11 @@ export default async function ProfitReportPage({
       </form>
 
       <div className="space-y-6">
-        <MonthlyProfitCard summary={report} />
+        <PeriodProfitCard
+          title={report.label}
+          subtitle="Profit for the whole month, broken out by source"
+          summary={report}
+        />
 
         <div>
           <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">

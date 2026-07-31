@@ -1,24 +1,31 @@
 import type { Prisma } from "@prisma/client";
 import { Card } from "@/components/ui";
 import { formatMoney } from "@/lib/format";
-import type { MonthlyProfitTotals } from "@/lib/reports";
+import type { PeriodProfit } from "@/lib/reports";
 
 /**
- * Profit breakdown for one calendar month — same shape/derivation as the
- * "today's business" evening hisab (components/daily-summary.tsx), just
- * scoped to a month instead of a day. Purely presentational.
+ * Profit breakdown for an arbitrary period (a day, a month, a custom date
+ * range) — same shape/derivation as the "today's business" evening hisab
+ * (components/daily-summary.tsx), just parameterised by title. Purely
+ * presentational.
  */
-export default function MonthlyProfitCard({ summary }: { summary: MonthlyProfitTotals }) {
+export default function PeriodProfitCard({
+  title,
+  subtitle = "Profit for the period, broken out by source",
+  summary,
+}: {
+  title: string;
+  subtitle?: string;
+  summary: PeriodProfit;
+}) {
   const s = summary;
 
   return (
     <Card className="overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50/60 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/40">
         <div>
-          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{s.label}</h2>
-          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-            Profit for the whole month, broken out by source
-          </p>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
         </div>
         <div className="text-right">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -69,7 +76,7 @@ export default function MonthlyProfitCard({ summary }: { summary: MonthlyProfitT
       <div className="grid gap-x-8 gap-y-2 px-5 py-4 text-sm sm:grid-cols-2">
         <Line label="Gross profit (before expenses)" value={formatMoney(s.grossProfit)} strong />
         <Line label="Cash received on sales" value={formatMoney(s.cashReceived)} />
-        <Line label="Udhaar given this month" value={formatMoney(s.creditGiven)} accent="gold" />
+        <Line label="Udhaar given this period" value={formatMoney(s.creditGiven)} accent="gold" />
         <Line label="Old udhaar recovered" value={formatMoney(s.creditReceived)} />
         <Line label="Refunds paid" value={formatMoney(s.returnsRefund)} accent="red" />
         <Line label="Expenses" value={formatMoney(s.expensesTotal)} accent="red" />
